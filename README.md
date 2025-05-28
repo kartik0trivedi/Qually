@@ -1,6 +1,6 @@
 # Qually
 ## Overview
-Qually Leading Edge is an LLM Audit Tool designed specifically for Social Science Research. This platform provides researchers with powerful capabilities to evaluate and audit Language Learning Models in the context of social science research.
+Qually is an LLM Audit Tool designed specifically for Social Science Research. This platform provides researchers with powerful capabilities to evaluate and audit Language Learning Models in the context of social science research.
 
 ## Features
 - LLM evaluation and auditing tools
