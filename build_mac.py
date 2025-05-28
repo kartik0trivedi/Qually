@@ -20,8 +20,8 @@ DATA_FILES = [
     ('', [
         'resources/icon.png',                     # Source: Qually_LE2/resources/icon.png
         'resources/app_icon.icns',                # Source: Qually_LE2/resources/app_icon.icns
-        'qually_theme.qss',                       # Source: Qually_LE2/qually_theme.qss (project root)
-        'modern_theme.qss',                       # Source: Qually_LE2/modern_theme.qss (project root)
+        'resources/qually_theme.qss',             # Source: Qually_LE2/resources/qually_theme.qss
+        'resources/modern_theme.qss',             # Source: Qually_LE2/resources/modern_theme.qss
         'resources/experiment_tab_additions.qss'  # Source: Qually_LE2/resources/experiment_tab_additions.qss
     ]),
     # Fonts to be placed in YourApp.app/Contents/Resources/fonts/
