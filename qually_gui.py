@@ -9,12 +9,12 @@ from PyQt6.QtWidgets import (
     QProgressDialog, QFormLayout, QSplitter, QGridLayout, QSlider, QSizePolicy
 )
 from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal, QSize
-from PyQt6.QtGui import QIcon, QPixmap, QDoubleValidator, QIntValidator
+from PyQt6.QtGui import QIcon, QPixmap, QDoubleValidator, QIntValidator, QFontDatabase, QFont
 import pandas as pd
 import json
 import os
 from pathlib import Path
-from qually_tool import APIKeyManager, PromptManager, ExperimentManager, ProviderFactory
+import qually_tool  # Changed from: from qually_le2.core import qually_tool
 from typing import Dict
 import csv
 import datetime
@@ -238,6 +238,42 @@ class SettingsManager:
         with open(SettingsManager.SETTINGS_PATH, 'w') as f:
             json.dump(settings, f, indent=4)
 
+class FontManager:
+    def __init__(self, resources_path):
+        self.resources_path = resources_path
+        self.fonts_path = resources_path / 'fonts'
+        self.font_ids = {}
+        self.load_fonts()
+    
+    def load_fonts(self):
+        """Load all font files from the fonts directory"""
+        font_files = {
+            'Inter-Regular-18': 'Inter_18pt-Regular.ttf',
+            'Inter-Regular-24': 'Inter_24pt-Regular.ttf',
+            'Inter-Regular-28': 'Inter_28pt-Regular.ttf'
+        }
+        
+        for font_name, font_file in font_files.items():
+            font_path = self.fonts_path / font_file
+            if font_path.exists():
+                font_id = QFontDatabase.addApplicationFont(str(font_path))
+                if font_id != -1:
+                    self.font_ids[font_name] = font_id
+                    gui_logger.info(f"Successfully loaded font: {font_name}")
+                else:
+                    gui_logger.error(f"Failed to load font: {font_name}")
+            else:
+                gui_logger.error(f"Font file not found: {font_path}")
+    
+    def get_font(self, font_name, size=None):
+        """Get a QFont instance for the specified font name and size"""
+        if font_name in self.font_ids:
+            font = QFont(QFontDatabase.applicationFontFamilies(self.font_ids[font_name])[0])
+            if size:
+                font.setPointSize(size)
+            return font
+        return QFont()
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -415,7 +451,7 @@ class MainWindow(QMainWindow):
 
         # Initialize managers
         try:
-            self.experiment_manager = ExperimentManager(self.project_folder)
+            self.experiment_manager = qually_tool.ExperimentManager(self.project_folder)
             self.api_key_manager = self.experiment_manager.api_key_manager
             self.prompt_manager = self.experiment_manager.prompt_manager
 
@@ -891,29 +927,12 @@ class MainWindow(QMainWindow):
         tab = QWidget()
         layout = QVBoxLayout(tab)
 
-        # ----- TOP SECTION: HELP TEXT -----
-        help_text = QLabel(
-            "Create experiments to test different LLM models and configurations. "
-            "Add one or more conditions to each experiment to compare performance."
-        )
-        help_text.setWordWrap(True)
-        help_text.setStyleSheet("""
-            QLabel {
-                padding: 10px;
-                background-color: #e9ecef;
-                border: 1px solid #ced4da;
-                border-radius: 5px;
-                margin-bottom: 10px;
-                font-size: 13px;
-            }
-        """)
-        layout.addWidget(help_text)
-
         # Create a horizontal splitter for the main content
         main_splitter = QSplitter(Qt.Orientation.Horizontal)
         
         # ----- LEFT PANEL: EXPERIMENT CREATION AND CONDITIONS -----
         left_panel = QWidget()
+        left_panel.setObjectName("experimentPane")  # NEW: Set object name for QSS targeting
         left_layout = QVBoxLayout(left_panel)
         left_layout.setContentsMargins(10, 10, 10, 10)
         left_layout.setSpacing(10)
@@ -921,60 +940,72 @@ class MainWindow(QMainWindow):
         # ----- EXPERIMENT DETAILS FORM -----
         exp_group = QGroupBox("Create New Experiment")
         exp_layout = QFormLayout(exp_group)
-        exp_layout.setContentsMargins(10, 15, 10, 15)
-        exp_layout.setSpacing(10)
+        exp_layout.setContentsMargins(10, 10, 10, 10)  # Reduced vertical margins
+        exp_layout.setSpacing(5)  # Reduced spacing between elements
 
+        # Create horizontal layout for name and description
+        name_desc_layout = QHBoxLayout()
+        name_desc_layout.setSpacing(10)  # Reduced spacing between name and description
+        
         # Experiment Name
+        name_layout = QFormLayout()
+        name_layout.setSpacing(5)  # Reduced spacing
         self.experiment_name_edit = QLineEdit()
         self.experiment_name_edit.setPlaceholderText("Enter experiment name")
-        exp_layout.addRow("Name:", self.experiment_name_edit)
-
+        name_layout.addRow("Name:", self.experiment_name_edit)
+        name_desc_layout.addLayout(name_layout)
+        
         # Experiment Description
+        desc_layout = QFormLayout()
+        desc_layout.setSpacing(5)  # Reduced spacing
         self.experiment_desc_edit = QLineEdit()
         self.experiment_desc_edit.setPlaceholderText("Enter a brief description (optional)")
-        exp_layout.addRow("Description:", self.experiment_desc_edit)
+        desc_layout.addRow("Description:", self.experiment_desc_edit)
+        name_desc_layout.addLayout(desc_layout)
+        
+        # Add the horizontal layout to the form
+        exp_layout.addRow(name_desc_layout)
         
         left_layout.addWidget(exp_group)
         
         # ----- CONDITION CREATION SECTION -----
         conditions_group = QGroupBox("Add Conditions")
         conditions_layout = QVBoxLayout(conditions_group)
+        conditions_layout.setSpacing(10)
         
-        # Condition Name (moved to top)
-        name_layout = QHBoxLayout()
-        name_label = QLabel("Condition Name:")
+        # Basic Parameters Form
+        basic_params_form = QFormLayout()
+        basic_params_form.setSpacing(10)
+        basic_params_form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
+        
+        # Condition Name
         self.condition_name_input = QLineEdit()
         self.condition_name_input.setPlaceholderText("Enter a descriptive name for this condition")
-        name_layout.addWidget(name_label)
-        name_layout.addWidget(self.condition_name_input)
-        conditions_layout.addLayout(name_layout)
+        basic_params_form.addRow("Condition Name:", self.condition_name_input)
         
-        # Provider and Model Selection
-        selection_layout = QHBoxLayout()
+        # Provider and Model Selection in a horizontal layout
+        provider_model_layout = QHBoxLayout()
         
         # Provider Selection
-        provider_form = QFormLayout()
         self.provider_combo = QComboBox()
-        provider_form.addRow("Provider:", self.provider_combo)
-        selection_layout.addLayout(provider_form)
+        provider_model_layout.addWidget(QLabel("Provider:"))
+        provider_model_layout.addWidget(self.provider_combo)
         
         # Model Selection
-        model_form = QFormLayout()
         self.model_combo = QComboBox()
-        model_form.addRow("Model:", self.model_combo)
-        selection_layout.addLayout(model_form)
+        provider_model_layout.addWidget(QLabel("Model:"))
+        provider_model_layout.addWidget(self.model_combo)
         
         # Refresh Models Button
         refresh_button = QPushButton("Refresh Models")
         refresh_button.setIcon(QIcon.fromTheme("view-refresh"))
         refresh_button.clicked.connect(self.refresh_models_list)
-        selection_layout.addWidget(refresh_button, 0, Qt.AlignmentFlag.AlignBottom)
+        provider_model_layout.addWidget(refresh_button)
         
-        conditions_layout.addLayout(selection_layout)
+        basic_params_form.addRow(provider_model_layout)
         
         # Max Tokens with info icon
         tokens_layout = QHBoxLayout()
-        tokens_label = QLabel("Max Tokens:")
         self.tokens_input = QLineEdit("500")
         self.tokens_input.setValidator(QIntValidator(1, 100000))
         self.tokens_input.setMaximumWidth(100)
@@ -983,7 +1014,6 @@ class MainWindow(QMainWindow):
         tokens_info = QPushButton()
         info_icon = QIcon.fromTheme("help-about")
         if info_icon.isNull():
-            # Fallback to a text-based info icon if theme icon is not available
             tokens_info.setText("ⓘ")
             tokens_info.setStyleSheet("""
                 QPushButton {
@@ -1019,273 +1049,165 @@ class MainWindow(QMainWindow):
             "Tip: Start with 500-1000 tokens for most tasks"
         )
         
-        tokens_layout.addWidget(tokens_label)
         tokens_layout.addWidget(self.tokens_input)
         tokens_layout.addWidget(tokens_info)
         tokens_layout.addStretch()
-        conditions_layout.addLayout(tokens_layout)
+        basic_params_form.addRow("Max Tokens:", tokens_layout)
         
-        # Parameters with sliders
+        conditions_layout.addLayout(basic_params_form)
+        
+        # Generation Parameters Group
         params_group = QGroupBox("Generation Parameters")
-        params_group.setStyleSheet("""
-            QGroupBox {
-                font-size: 14px;
-                font-weight: bold;
-                margin-top: 1em;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 3px 0 3px;
-            }
-            QLineEdit {
-                padding: 2px;
-                margin: 2px;
-            }
-            QPushButton {
-                margin: 2px;
-            }
-        """)
-        params_layout = QVBoxLayout(params_group)
-        params_layout.setSpacing(10)  # Add spacing between parameter rows
+        params_group.setProperty("advanced", True)
+        params_group.setCheckable(True)
+        params_group.setChecked(False)
+        params_layout = QFormLayout(params_group)
+        params_layout.setSpacing(10)
+        params_layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
         
         # Temperature
         temp_layout = QHBoxLayout()
-        temp_layout.setSpacing(5)  # Add spacing between elements
-        temp_label = QLabel("Temperature:")
-        temp_label.setMinimumWidth(120)  # Ensure consistent label width
+        temp_layout.setContentsMargins(0, 0, 0, 0)  # Remove margins
+        temp_layout.setSpacing(5)  # Reduce spacing between elements
         self.temp_slider = QSlider(Qt.Orientation.Horizontal)
-        self.temp_slider.setRange(0, 200)  # 0.0 to 2.0 with 0.01 steps
-        self.temp_slider.setValue(70)  # Default 0.7
+        self.temp_slider.setRange(0, 200)
+        self.temp_slider.setValue(70)
         self.temp_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
         self.temp_slider.setTickInterval(20)
-        self.temp_slider.setFixedHeight(32)  # Match text box height
+        self.temp_slider.setFixedHeight(30)
         self.temp_slider.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.temp_slider.valueChanged.connect(lambda v: self.temp_input.setText(f"{v/100:.2f}"))
+        
         self.temp_input = QLineEdit("0.7")
         self.temp_input.setValidator(QDoubleValidator(0.0, 2.0, 2))
         self.temp_input.setFixedWidth(60)
         self.temp_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.temp_input.setFixedHeight(32)  # Increased height
-        self.temp_input.setStyleSheet("QLineEdit { font-size: 15px; }")
-        # Synchronize slider and text box (after both are created)
-        def update_temp_input():
-            value = self.temp_slider.value() / 100
-            self.temp_input.setText(f"{value:.2f}")
-        def update_temp_slider():
-            try:
-                value = float(self.temp_input.text())
-                self.temp_slider.setValue(int(value * 100))
-            except ValueError:
-                pass
-        self.temp_slider.valueChanged.connect(update_temp_input)
-        self.temp_input.textChanged.connect(update_temp_slider)
+        self.temp_input.setFixedHeight(30)
+        self.temp_input.textChanged.connect(lambda t: self.temp_slider.setValue(int(float(t) * 100)))
         
-        # Add info icon for temperature
+        # Add tooltip icon for temperature
         temp_info = QPushButton()
-        if info_icon.isNull():
-            temp_info.setText("ⓘ")
-            temp_info.setStyleSheet("""
-                QPushButton {
-                    color: #666;
-                    font-weight: bold;
-                    border: none;
-                    padding: 2px;
-                    background: transparent;
-                    min-width: 20px;
-                    min-height: 20px;
-                }
-                QPushButton:hover {
-                    color: #000;
-                }
-            """)
-        else:
-            temp_info.setIcon(info_icon)
-            temp_info.setIconSize(QSize(16, 16))
-            temp_info.setStyleSheet("""
-                QPushButton {
-                    border: none;
-                    padding: 2px;
-                    background: transparent;
-                    min-width: 20px;
-                    min-height: 20px;
-                }
-                QPushButton:hover {
-                    background: transparent;
-                }
-            """)
+        temp_info.setText("ⓘ")
+        temp_info.setStyleSheet("""
+            QPushButton {
+                color: #666;
+                font-weight: bold;
+                border: none;
+                padding: 0px;
+                background: transparent;
+            }
+            QPushButton:hover {
+                color: #000;
+            }
+        """)
         temp_info.setToolTip(
-            "Controls randomness in the output:\n\n"
+            "Controls randomness in the output (0.0 to 2.0):\n\n"
             "• 0.0: Most deterministic, focused output\n"
-            "• 0.7: Balanced creativity (default)\n"
-            "• 1.0: More creative, diverse output\n"
-            "• 2.0: Maximum creativity\n\n"
-            "Tip: Use lower values (0.0-0.5) for factual responses,\n"
-            "higher values (0.7-1.0) for creative tasks"
+            "• 0.7: Balanced creativity and coherence\n"
+            "• 1.0: More creative, varied responses\n"
+            "• 2.0: Maximum creativity, less predictable"
         )
         
-        temp_layout.addWidget(temp_label)
-        temp_layout.addWidget(self.temp_slider, 1)  # Give slider stretch
-        temp_layout.addWidget(self.temp_input, 0)
-        temp_layout.addWidget(temp_info, 0)
-        params_layout.addLayout(temp_layout)
+        temp_layout.addWidget(self.temp_slider, 1)  # Give slider more space
+        temp_layout.addWidget(self.temp_input)
+        temp_layout.addWidget(temp_info)
+        params_layout.addRow("Temperature:", temp_layout)
         
         # Top P
         top_p_layout = QHBoxLayout()
-        top_p_layout.setSpacing(5)  # Add spacing between elements
-        top_p_label = QLabel("Top P:")
-        top_p_label.setMinimumWidth(120)  # Ensure consistent label width
+        top_p_layout.setContentsMargins(0, 0, 0, 0)  # Remove margins
+        top_p_layout.setSpacing(5)  # Reduce spacing between elements
         self.top_p_slider = QSlider(Qt.Orientation.Horizontal)
-        self.top_p_slider.setRange(0, 100)  # 0.0 to 1.0 with 0.01 steps
-        self.top_p_slider.setValue(100)  # Default 1.0
+        self.top_p_slider.setRange(0, 100)
+        self.top_p_slider.setValue(100)
         self.top_p_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
         self.top_p_slider.setTickInterval(20)
-        self.top_p_slider.setFixedHeight(32)  # Match text box height
+        self.top_p_slider.setFixedHeight(30)
         self.top_p_slider.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.top_p_slider.valueChanged.connect(lambda v: self.top_p_input.setText(f"{v/100:.2f}"))
+        
         self.top_p_input = QLineEdit("1.0")
         self.top_p_input.setValidator(QDoubleValidator(0.0, 1.0, 2))
         self.top_p_input.setFixedWidth(60)
         self.top_p_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.top_p_input.setFixedHeight(32)  # Increased height
-        self.top_p_input.setStyleSheet("QLineEdit { font-size: 15px; }")
-        # Synchronize slider and text box (after both are created)
-        def update_top_p_input():
-            value = self.top_p_slider.value() / 100
-            self.top_p_input.setText(f"{value:.2f}")
-        def update_top_p_slider():
-            try:
-                value = float(self.top_p_input.text())
-                self.top_p_slider.setValue(int(value * 100))
-            except ValueError:
-                pass
-        self.top_p_slider.valueChanged.connect(update_top_p_input)
-        self.top_p_input.textChanged.connect(update_top_p_slider)
+        self.top_p_input.setFixedHeight(30)
+        self.top_p_input.textChanged.connect(lambda t: self.top_p_slider.setValue(int(float(t) * 100)))
         
-        # Add info icon for top P
+        # Add tooltip icon for top p
         top_p_info = QPushButton()
-        if info_icon.isNull():
-            top_p_info.setText("ⓘ")
-            top_p_info.setStyleSheet("""
-                QPushButton {
-                    color: #666;
-                    font-weight: bold;
-                    border: none;
-                    padding: 2px;
-                    background: transparent;
-                    min-width: 20px;
-                    min-height: 20px;
-                }
-                QPushButton:hover {
-                    color: #000;
-                }
-            """)
-        else:
-            top_p_info.setIcon(info_icon)
-            top_p_info.setIconSize(QSize(16, 16))
-            top_p_info.setStyleSheet("""
-                QPushButton {
-                    border: none;
-                    padding: 2px;
-                    background: transparent;
-                    min-width: 20px;
-                    min-height: 20px;
-                }
-                QPushButton:hover {
-                    background: transparent;
-                }
-            """)
+        top_p_info.setText("ⓘ")
+        top_p_info.setStyleSheet("""
+            QPushButton {
+                color: #666;
+                font-weight: bold;
+                border: none;
+                padding: 0px;
+                background: transparent;
+            }
+            QPushButton:hover {
+                color: #000;
+            }
+        """)
         top_p_info.setToolTip(
-            "Controls diversity via nucleus sampling:\n\n"
-            "• 0.1: Very focused, deterministic output\n"
-            "• 0.5: Balanced diversity\n"
-            "• 1.0: Maximum diversity (default)\n\n"
-            "Tip: Use lower values (0.1-0.5) for focused responses,\n"
-            "higher values (0.7-1.0) for diverse outputs"
+            "Controls diversity via nucleus sampling (0.0 to 1.0):\n\n"
+            "• 1.0: Consider all possible tokens\n"
+            "• 0.9: Consider top 90% of tokens\n"
+            "• 0.5: Consider top 50% of tokens\n"
+            "• Lower values make output more focused"
         )
         
-        top_p_layout.addWidget(top_p_label)
-        top_p_layout.addWidget(self.top_p_slider, 1)  # Give slider stretch
-        top_p_layout.addWidget(self.top_p_input, 0)
-        top_p_layout.addWidget(top_p_info, 0)
-        params_layout.addLayout(top_p_layout)
+        top_p_layout.addWidget(self.top_p_slider, 1)  # Give slider more space
+        top_p_layout.addWidget(self.top_p_input)
+        top_p_layout.addWidget(top_p_info)
+        params_layout.addRow("Top P:", top_p_layout)
         
         # Frequency Penalty
         freq_penalty_layout = QHBoxLayout()
-        freq_penalty_layout.setSpacing(5)  # Add spacing between elements
-        freq_penalty_label = QLabel("Frequency Penalty:")
-        freq_penalty_label.setMinimumWidth(120)  # Ensure consistent label width
+        freq_penalty_layout.setContentsMargins(0, 0, 0, 0)  # Remove margins
+        freq_penalty_layout.setSpacing(5)  # Reduce spacing between elements
         self.freq_penalty_slider = QSlider(Qt.Orientation.Horizontal)
-        self.freq_penalty_slider.setRange(-200, 200)  # -2.0 to 2.0 with 0.01 steps
-        self.freq_penalty_slider.setValue(0)  # Default 0.0
+        self.freq_penalty_slider.setRange(-200, 200)
+        self.freq_penalty_slider.setValue(0)
         self.freq_penalty_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
         self.freq_penalty_slider.setTickInterval(100)
-        self.freq_penalty_slider.setFixedHeight(32)  # Match text box height
+        self.freq_penalty_slider.setFixedHeight(30)
         self.freq_penalty_slider.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.freq_penalty_slider.valueChanged.connect(lambda v: self.freq_penalty_input.setText(f"{v/100:.2f}"))
+        
         self.freq_penalty_input = QLineEdit("0.0")
         self.freq_penalty_input.setValidator(QDoubleValidator(-2.0, 2.0, 2))
         self.freq_penalty_input.setFixedWidth(60)
         self.freq_penalty_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.freq_penalty_input.setFixedHeight(32)  # Increased height
-        self.freq_penalty_input.setStyleSheet("QLineEdit { font-size: 15px; }")
-        # Synchronize slider and text box (after both are created)
-        def update_freq_penalty_input():
-            value = self.freq_penalty_slider.value() / 100
-            self.freq_penalty_input.setText(f"{value:.2f}")
-        def update_freq_penalty_slider():
-            try:
-                value = float(self.freq_penalty_input.text())
-                self.freq_penalty_slider.setValue(int(value * 100))
-            except ValueError:
-                pass
-        self.freq_penalty_slider.valueChanged.connect(update_freq_penalty_input)
-        self.freq_penalty_input.textChanged.connect(update_freq_penalty_slider)
+        self.freq_penalty_input.setFixedHeight(30)
+        self.freq_penalty_input.textChanged.connect(lambda t: self.freq_penalty_slider.setValue(int(float(t) * 100)))
         
-        # Add info icon for frequency penalty
+        # Add tooltip icon for frequency penalty
         freq_penalty_info = QPushButton()
-        if info_icon.isNull():
-            freq_penalty_info.setText("ⓘ")
-            freq_penalty_info.setStyleSheet("""
-                QPushButton {
-                    color: #666;
-                    font-weight: bold;
-                    border: none;
-                    padding: 2px;
-                    background: transparent;
-                    min-width: 20px;
-                    min-height: 20px;
-                }
-                QPushButton:hover {
-                    color: #000;
-                }
-            """)
-        else:
-            freq_penalty_info.setIcon(info_icon)
-            freq_penalty_info.setIconSize(QSize(16, 16))
-            freq_penalty_info.setStyleSheet("""
-                QPushButton {
-                    border: none;
-                    padding: 2px;
-                    background: transparent;
-                    min-width: 20px;
-                    min-height: 20px;
-                }
-                QPushButton:hover {
-                    background: transparent;
-                }
-            """)
+        freq_penalty_info.setText("ⓘ")
+        freq_penalty_info.setStyleSheet("""
+            QPushButton {
+                color: #666;
+                font-weight: bold;
+                border: none;
+                padding: 0px;
+                background: transparent;
+            }
+            QPushButton:hover {
+                color: #000;
+            }
+        """)
         freq_penalty_info.setToolTip(
-            "Controls repetition in the output:\n\n"
-            "• -2.0: More likely to repeat\n"
-            "• 0.0: No effect on repetition (default)\n"
-            "• 2.0: Less likely to repeat\n\n"
-            "Tip: Use positive values (0.5-2.0) to reduce repetition,\n"
-            "negative values (-0.5 to -2.0) to encourage repetition"
+            "Controls repetition in the output (-2.0 to 2.0):\n\n"
+            "• 0.0: No penalty for repetition\n"
+            "• Positive: Reduces repetition of frequent tokens\n"
+            "• Negative: Allows more repetition\n"
+            "• Higher values encourage more diverse vocabulary"
         )
         
-        freq_penalty_layout.addWidget(freq_penalty_label)
-        freq_penalty_layout.addWidget(self.freq_penalty_slider, 1)  # Give slider stretch
-        freq_penalty_layout.addWidget(self.freq_penalty_input, 0)
-        freq_penalty_layout.addWidget(freq_penalty_info, 0)
-        params_layout.addLayout(freq_penalty_layout)
+        freq_penalty_layout.addWidget(self.freq_penalty_slider, 1)  # Give slider more space
+        freq_penalty_layout.addWidget(self.freq_penalty_input)
+        freq_penalty_layout.addWidget(freq_penalty_info)
+        params_layout.addRow("Frequency Penalty:", freq_penalty_layout)
         
         conditions_layout.addWidget(params_group)
         
@@ -1296,6 +1218,11 @@ class MainWindow(QMainWindow):
         conditions_layout.addWidget(add_condition_button, 0, Qt.AlignmentFlag.AlignRight)
         
         left_layout.addWidget(conditions_group)
+        
+        # ----- RIGHT PANEL: EXPERIMENTS TABLE -----
+        right_panel = QWidget()
+        right_layout = QVBoxLayout(right_panel)
+        right_layout.setContentsMargins(10, 10, 10, 10)
         
         # ----- CONDITIONS LIST SECTION -----
         conditions_list_group = QGroupBox("Current Conditions")
@@ -1328,18 +1255,14 @@ class MainWindow(QMainWindow):
         condition_buttons_layout.addStretch()
         
         save_experiment_button = QPushButton("Save Experiment")
+        save_experiment_button.setProperty("class", "primary")  # NEW: Mark as primary button
         save_experiment_button.setIcon(QIcon.fromTheme("document-save"))
         save_experiment_button.clicked.connect(self.add_experiment_from_form)
         condition_buttons_layout.addWidget(save_experiment_button)
         
         conditions_list_layout.addLayout(condition_buttons_layout)
         
-        left_layout.addWidget(conditions_list_group)
-        
-        # ----- RIGHT PANEL: EXPERIMENTS TABLE -----
-        right_panel = QWidget()
-        right_layout = QVBoxLayout(right_panel)
-        right_layout.setContentsMargins(10, 10, 10, 10)
+        right_layout.addWidget(conditions_list_group)
         
         # Table Label
         experiments_label = QLabel("Existing Experiments")
@@ -1372,6 +1295,7 @@ class MainWindow(QMainWindow):
         delete_button.clicked.connect(self.delete_selected_experiments)
         
         run_button = QPushButton("Run Selected")
+        run_button.setProperty("class", "primary")  # NEW: Mark as primary button
         run_button.setIcon(QIcon.fromTheme("system-run"))
         run_button.clicked.connect(self.show_run_experiment_dialog_for_selected)
         
@@ -2985,14 +2909,26 @@ class MainWindow(QMainWindow):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     
-    # Load and apply modern theme
-    theme_path = Path(__file__).parent / "modern_theme.qss"
-    if theme_path.exists():
-        with open(theme_path, "r") as f:
-            app.setStyleSheet(f.read())
+    # Initialize font manager
+    font_manager = FontManager(resources_path)
     
-    # Add global QLineEdit style for uniformity
-    app.setStyleSheet(app.styleSheet() + "\nQLineEdit { height: 32px; font-size: 15px; padding: 4px 8px; }")
+    # Set default application font
+    app.setFont(font_manager.get_font('Inter-Regular-18', 12))
+    
+    # Load and apply modern theme
+    base_theme_path = Path(__file__).parent / "modern_theme.qss"
+    experiment_theme_path = resources_path / "experiment_tab_additions.qss"
+    
+    if base_theme_path.exists():
+        with open(base_theme_path, "r") as f:
+            base_theme = f.read()
+            
+        if experiment_theme_path.exists():
+            with open(experiment_theme_path, "r") as f:
+                experiment_theme = f.read()
+            app.setStyleSheet(base_theme + experiment_theme)
+        else:
+            app.setStyleSheet(base_theme)
     
     window = MainWindow()
     window.show()

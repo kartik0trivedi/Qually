@@ -15,7 +15,6 @@ from cryptography.fernet import Fernet
 from requests.adapters import HTTPAdapter, Retry
 import shutil # Added for os.replace fallback
 # import sys # Removed unused import (CLI mode removed)
-import re
 
 # Set up logging
 logging.basicConfig(
@@ -27,14 +26,6 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
-
-# Utility function to sanitize URLs for logging
-def sanitize_url_for_log(url: str) -> str:
-    # Mask common API key/query parameter patterns
-    url = re.sub(r'([?&]key=)[^&]+', r'\1***', url, flags=re.IGNORECASE)
-    url = re.sub(r'([?&]api_key=)[^&]+', r'\1***', url, flags=re.IGNORECASE)
-    url = re.sub(r'(Bearer )[A-Za-z0-9\-_\.]+', r'\1***', url, flags=re.IGNORECASE)
-    return url
 
 class APIKeyManager:
     """Manages API keys for different LLM providers with encryption."""
@@ -826,11 +817,9 @@ class GoogleProvider(LLMProvider):
             return sorted(available_models)
 
         except requests.exceptions.RequestException as e:
-            safe_url = sanitize_url_for_log(api_url)
-            logger.error(f"Network error getting Google models: {str(e)} | URL: {safe_url}")
+            logger.error(f"Network error getting Google models: {str(e)}")
         except Exception as e:
-            safe_url = sanitize_url_for_log(api_url)
-            logger.error(f"Error getting Google models: {str(e)} | URL: {safe_url}")
+            logger.error(f"Error getting Google models: {str(e)}")
             if response is not None and hasattr(response, 'text'):
                  logger.error(f"Google models response text: {response.text[:500]}")
 

@@ -37,14 +37,15 @@ Required packages include:
 ## Running the Application
 
 ### Development Mode
+Because the code is organized under a `src/` directory, you must set the `PYTHONPATH` so Python can find your modules:
 ```bash
-python qually_gui.py
+PYTHONPATH=src python qually_gui.py
 ```
 
 ### Building the Application
 The application can be built into a native MacOS application using py2app:
 ```bash
-python setup.py py2app
+python build_mac.py py2app
 ```
 
 ## Project Structure

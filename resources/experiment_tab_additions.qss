@@ -1,0 +1,143 @@
+/* =====================================================================
+   Experiment Tab – incremental, SAFE overrides
+   Place this *after* you import modern_theme.qss so it only tweaks
+   widgets inside the Experiment tab.  Nothing else in the app will pick
+   up these rules unless you give it the same objectName / class.
+   ===================================================================== */
+
+/* 1.  Give the **left‑hand container** in your Experiment tab the objectName
+       "experimentPane" (e.g.,  pane->setObjectName("experimentPane") )      */
+
+#experimentPane {
+    /* Optional: subtle card background so the pane stands out */
+    background: #ffffff;
+}
+
+/* ---------------------------------------------------------------------
+   Create New Experiment block styling
+   ------------------------------------------------------------------ */
+#experimentPane QGroupBox {
+    margin-top: 8px;
+    padding: 8px;
+}
+
+#experimentPane QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 8px;
+    padding: 0 4px;
+    font-weight: 600;
+    color: #495057;
+}
+
+#experimentPane QLineEdit {
+    padding: 4px 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    background: #ffffff;
+    min-height: 24px;
+    max-height: 24px;
+}
+
+#experimentPane QFormLayout {
+    margin: 0px;
+    spacing: 4px;
+}
+
+#experimentPane QFormLayout QLabel {
+    padding: 0px;
+    margin: 0px;
+}
+
+/* ---------------------------------------------------------------------
+   Generation Parameters Slider Styling
+   ------------------------------------------------------------------ */
+#experimentPane QSlider {
+    min-height: 30px;
+    margin: 0px 8px;
+}
+
+#experimentPane QSlider::groove:horizontal {
+    border: 1px solid #ced4da;
+    height: 8px;
+    background: #e9ecef;
+    margin: 2px 0;
+    border-radius: 4px;
+}
+
+#experimentPane QSlider::handle:horizontal {
+    background: #0078D4;
+    border: 1px solid #0059A6;
+    width: 18px;
+    height: 18px;
+    margin: -6px 0;
+    border-radius: 9px;
+}
+
+#experimentPane QSlider::handle:horizontal:hover {
+    background: #006CBE;
+}
+
+#experimentPane QSlider::sub-page:horizontal {
+    background: #0078D4;
+    border-radius: 4px;
+}
+
+#experimentPane QSlider::add-page:horizontal {
+    background: #e9ecef;
+    border-radius: 4px;
+}
+
+/* ---------------------------------------------------------------------
+   Primary action buttons (Save experiment, Run selected, etc.)
+   ------------------------------------------------------------------ */
+#experimentPane QPushButton.primary {
+    background-color: #0078D4;   /* unified accent */
+    color: #ffffff;
+    border: none;
+    padding: 6px 18px;
+    border-radius: 4px;
+    font-weight: 600;
+}
+#experimentPane QPushButton.primary:hover  { background-color: #006CBE; }
+#experimentPane QPushButton.primary:pressed{ background-color: #0059A6; }
+#experimentPane QPushButton.primary:disabled{
+    background-color: #9ec6ef;
+    color: #e9f2ff;
+}
+
+/* ---------------------------------------------------------------------
+   Advanced parameters accordion – mark its QGroupBox with
+   setProperty("advanced", true) so we can style it.
+   ------------------------------------------------------------------ */
+#experimentPane QGroupBox[advanced="true"] {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    margin-top: 8px;            /* space from previous widget */
+    padding: 8px;
+}
+#experimentPane QGroupBox[advanced="true"]::title {
+    subcontrol-origin: margin;
+    left: 8px;                  /* pulls title inside border */
+    top: -6px;
+    padding: 0 4px;
+    font-weight: 600;
+    color: #495057;
+}
+
+/* ---------------------------------------------------------------------
+   Condition "cards" – after you convert the table rows into flow‑layout
+   widgets, give each QLabel container the class "conditionCard":
+   card->setProperty("class", "conditionCard");
+   ------------------------------------------------------------------ */
+#experimentPane .conditionCard {
+    background: #e9f2ff;        /* light blue pill */
+    border: 1px solid #c7ddff;
+    border-radius: 4px;
+    padding: 4px 8px;
+    margin: 4px 4px;            /* slight gap for wrapping */
+}
+#experimentPane .conditionCard QLabel {
+    color: #0052B4;
+    font-weight: 500;
+} 
