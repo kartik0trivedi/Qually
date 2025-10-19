@@ -5,15 +5,17 @@ import datetime
 import pandas as pd
 # import numpy as np # Removed unused import
 import requests
-from typing import Dict, List, Any, Optional, Union, Tuple
+from typing import Dict, List, Optional, Tuple
 import logging
 # import argparse # Removed unused import (CLI mode removed)
 from pathlib import Path
 import time
+import random
 # import yaml # Removed unused import
 from cryptography.fernet import Fernet
 from requests.adapters import HTTPAdapter, Retry
 import shutil # Added for os.replace fallback
+import threading
 # import sys # Removed unused import (CLI mode removed)
 
 # Set up logging
@@ -393,16 +395,73 @@ class LLMProvider:
         """Initialize LLM provider with API key."""
         self.api_key = api_key
         self.session = requests.Session()
-        # Configure retries for common server errors and network issues
+        
+        # Rate limiting configuration
+        self._last_request_time = 0
+        self._request_lock = threading.Lock()
+        self.min_request_interval = self._get_default_request_interval()
+        self._load_rate_limiting_config()
+        
+        # Configure retries for common server errors and network issues with jitter
         retries = Retry(
             total=3,
             backoff_factor=0.5, # E.g., {0.5s, 1s, 2s} delays
             status_forcelist=[429, 500, 502, 503, 504], # Retry on rate limits and server errors
-            allowed_methods=["HEAD", "GET", "POST", "PUT", "DELETE", "OPTIONS", "TRACE"] # Retry on relevant methods
+            allowed_methods=["HEAD", "GET", "POST", "PUT", "DELETE", "OPTIONS", "TRACE"], # Retry on relevant methods
+            raise_on_status=False  # Don't raise on retries
             )
         self.session.mount("https://", HTTPAdapter(max_retries=retries))
         self.session.mount("http://", HTTPAdapter(max_retries=retries)) # Also mount for http
-        logger.debug(f"Initialized LLMProvider base for {type(self).__name__}")
+        logger.debug(f"Initialized LLMProvider base for {type(self).__name__} with rate limiting")
+
+    def _get_default_request_interval(self) -> float:
+        """Get default request interval based on provider type."""
+        provider_name = type(self).__name__.lower()
+        # Conservative defaults to avoid rate limits
+        intervals = {
+            'openai': 1.0,      # 1 request per second
+            'anthropic': 2.0,   # 1 request per 2 seconds (more conservative for Claude)
+            'google': 1.5,      # 1 request per 1.5 seconds
+            'mistral': 1.0,     # 1 request per second
+            'grok': 1.0,        # 1 request per second
+            'deepseek': 1.0     # 1 request per second
+        }
+        return intervals.get(provider_name, 1.0)
+
+    def _load_rate_limiting_config(self):
+        """Load rate limiting configuration from settings.json."""
+        try:
+            settings_file = Path("settings.json")
+            if settings_file.exists():
+                with open(settings_file, 'r') as f:
+                    settings = json.load(f)
+                    rate_config = settings.get("rate_limiting", {})
+                    
+                    if rate_config.get("enabled", True):
+                        provider_name = type(self).__name__.lower().replace("provider", "")
+                        delay_key = f"{provider_name}_delay_seconds"
+                        if delay_key in rate_config:
+                            self.min_request_interval = rate_config[delay_key]
+                            logger.info(f"Loaded rate limiting config for {provider_name}: {self.min_request_interval}s")
+        except Exception as e:
+            logger.warning(f"Could not load rate limiting config: {e}. Using defaults.")
+
+    def _throttle_request(self):
+        """Throttle requests to respect rate limits."""
+        with self._request_lock:
+            current_time = time.time()
+            time_since_last_request = current_time - self._last_request_time
+            
+            if time_since_last_request < self.min_request_interval:
+                sleep_time = self.min_request_interval - time_since_last_request
+                # Add small random jitter to prevent thundering herd
+                jitter = random.uniform(0.1, 0.3)
+                total_sleep = sleep_time + jitter
+                
+                logger.debug(f"Rate limiting: sleeping for {total_sleep:.2f}s")
+                time.sleep(total_sleep)
+            
+            self._last_request_time = time.time()
 
 
     def generate(self, prompt: str, system_prompt: str = "", parameters: Dict = None) -> Dict:
@@ -454,6 +513,9 @@ class OpenAIProvider(LLMProvider):
         response = None # Initialize response to None
 
         try:
+            # Apply rate limiting before making the request
+            self._throttle_request()
+            
             response = self.session.post(
                 api_url,
                 headers=headers,
@@ -479,6 +541,26 @@ class OpenAIProvider(LLMProvider):
                 "parameters": parameters,
                 "raw_response": result
             }
+        except requests.exceptions.HTTPError as e:
+            # Handle HTTP errors including rate limits
+            if e.response.status_code == 429:
+                logger.warning(f"Rate limit hit for OpenAI API: {str(e)}")
+                return {
+                    "text": f"Error: Rate limit exceeded - {str(e)}",
+                    "model": model,
+                    "provider": "openai",
+                    "parameters": parameters,
+                    "error": f"Rate limit: {str(e)}"
+                }
+            else:
+                logger.error(f"HTTP error calling OpenAI API: {str(e)}")
+                return {
+                    "text": f"Error: HTTP {e.response.status_code} - {str(e)}",
+                    "model": model,
+                    "provider": "openai",
+                    "parameters": parameters,
+                    "error": f"HTTP {e.response.status_code}: {str(e)}"
+                }
         except requests.exceptions.RequestException as e:
             # Handle connection errors, timeouts, etc.
             logger.error(f"Network error calling OpenAI API: {str(e)}")
@@ -555,7 +637,7 @@ class AnthropicProvider(LLMProvider):
         model = parameters.get("model", "claude-3-opus-20240229") # Default model
         temperature = parameters.get("temperature", 0.7)
         max_tokens = parameters.get("max_tokens", 500)
-        top_p = parameters.get("top_p", 1.0) # Note: Anthropic might use top_k instead or combine
+        # top_p = parameters.get("top_p", 1.0) # Note: Anthropic might use top_k instead or combine
 
         headers = {
             "Content-Type": "application/json",
@@ -582,6 +664,9 @@ class AnthropicProvider(LLMProvider):
         response = None
 
         try:
+            # Apply rate limiting before making the request
+            self._throttle_request()
+            
             response = self.session.post(
                 api_url,
                 headers=headers,
@@ -611,6 +696,26 @@ class AnthropicProvider(LLMProvider):
                 "parameters": parameters,
                 "raw_response": result
             }
+        except requests.exceptions.HTTPError as e:
+            # Handle HTTP errors including rate limits
+            if e.response.status_code == 429:
+                logger.warning(f"Rate limit hit for Anthropic API: {str(e)}")
+                return {
+                    "text": f"Error: Rate limit exceeded - {str(e)}",
+                    "model": model,
+                    "provider": "anthropic",
+                    "parameters": parameters,
+                    "error": f"Rate limit: {str(e)}"
+                }
+            else:
+                logger.error(f"HTTP error calling Anthropic API: {str(e)}")
+                return {
+                    "text": f"Error: HTTP {e.response.status_code} - {str(e)}",
+                    "model": model,
+                    "provider": "anthropic",
+                    "parameters": parameters,
+                    "error": f"HTTP {e.response.status_code}: {str(e)}"
+                }
         except requests.exceptions.RequestException as e:
             logger.error(f"Network error calling Anthropic API: {str(e)}")
             return {
@@ -707,6 +812,9 @@ class GoogleProvider(LLMProvider):
 
         response = None
         try:
+            # Apply rate limiting before making the request
+            self._throttle_request()
+            
             response = self.session.post(
                 api_url,
                 headers=headers,
@@ -881,6 +989,9 @@ class MistralProvider(LLMProvider):
         response = None
 
         try:
+            # Apply rate limiting before making the request
+            self._throttle_request()
+            
             response = self.session.post(
                 api_url,
                 headers=headers,
@@ -1032,6 +1143,9 @@ class GrokProvider(LLMProvider):
 
         response = None
         try:
+            # Apply rate limiting before making the request
+            self._throttle_request()
+            
             # Make the API call
             response = self.session.post(api_url, headers=headers, json=data, timeout=90) # Increased timeout
             response.raise_for_status()  # Raise exception for 4xx/5xx errors
@@ -1198,6 +1312,9 @@ class DeepSeekProvider(LLMProvider):
 
         response = None
         try:
+            # Apply rate limiting before making the request
+            self._throttle_request()
+            
             response = self.session.post(
                 api_url,
                 headers=headers,
