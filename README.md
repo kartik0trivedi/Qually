@@ -70,7 +70,6 @@ Qually/
 ├── build_mac.py           # macOS build script
 ├── build_win.py           # Windows build script
 ├── resources/             # UI resources (icons, themes, fonts)
-├── src/qually_le2/        # Source package
 └── README.md              # This file
 ```
 
