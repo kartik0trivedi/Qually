@@ -1,0 +1,13 @@
+# Core dependencies for Qually LE2
+PyQt6>=6.9.0
+pandas>=2.2.0
+requests>=2.32.0
+cryptography>=44.0.0
+
+# Optional dependencies for enhanced functionality
+numpy>=1.24.0
+python-dateutil>=2.8.0
+
+# Development and build dependencies (optional)
+py2app>=0.28.0
+setuptools>=65.0.0
