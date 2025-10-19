@@ -1,6 +1,6 @@
-# Qually LE2
+# Qually
 ## Overview
-Qually LE2 is an advanced LLM Audit Tool designed specifically for Social Science Research. This platform provides researchers with powerful capabilities to evaluate and audit Language Learning Models in the context of social science research without getting into the weeds of coding and programming.
+Qually is an advanced LLM Audit Tool designed specifically for Social Science Research. This platform provides researchers with powerful capabilities to evaluate and audit Language Learning Models in the context of social science research without getting into the weeds of coding and programming.
 
 ## Features
 - **Multi-Provider LLM Support**: OpenAI, Anthropic (Claude), Google (Gemini), Mistral, Grok, and DeepSeek
@@ -70,7 +70,6 @@ Qually/
 ├── build_mac.py           # macOS build script
 ├── build_win.py           # Windows build script
 ├── resources/             # UI resources (icons, themes, fonts)
-├── src/qually_le2/        # Source package
 └── README.md              # This file
 ```
 
