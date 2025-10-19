@@ -44,4 +44,23 @@ Thumbs.db
 logs/
 *.log
 settings.json
-*.csv 
+*.csv
+
+# API Keys and sensitive data
+api_keys.json
+encryption_key.key
+*.key
+
+# Results and experiment data
+results/
+experiments.json
+prompts.csv
+prompts_backup.csv
+
+# Build artifacts
+build_mac.py
+build_win.py
+
+# Markdown files (except README.md)
+*.md
+!README.md 
