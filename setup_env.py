@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Environment setup script for Qually LE.
+Environment setup script for Qually.
 This script creates a virtual environment and installs all required dependencies.
 Works on both Windows and macOS.
 """
@@ -14,11 +14,12 @@ from pathlib import Path
 
 # Required packages and their versions
 REQUIRED_PACKAGES = [
-    'PyQt6>=6.4.0',
-    'pandas>=2.0.0',
-    'numpy>=1.24.0',
-    'cryptography>=41.0.0',
-    'requests>=2.31.0',
+    'PyQt6>=6.9.0',
+    'pandas>=2.2.0',
+    'numpy>=2.1.0',
+    'cryptography>=44.0.0',
+    'requests>=2.32.0',
+    'py2app>=0.28.0',  # For building macOS applications
     'pyinstaller>=6.0.0',  # For building executables
 ]
 
@@ -79,6 +80,7 @@ required_packages = [
     'numpy',
     'cryptography',
     'requests',
+    'py2app',
     'pyinstaller'
 ]
 
@@ -110,7 +112,7 @@ else:
 
 def main():
     """Main function to set up the environment."""
-    print("Setting up Qually LE development environment...")
+    print("Setting up Qually development environment...")
     
     # Create virtual environment
     create_venv()
