@@ -100,7 +100,7 @@ For support, please visit [kartiktrivedi.in](https://www.kartiktrivedi.in) or op
 - Email: hello@kartiktrivedi.in
 
 ## Version
-Current version: 2.0.0 (LE2)
+Current version: 0.2.0. 
 
 ## Acknowledgments
 - Funding for this application was provided by the Advanced Rehabilitation Research and Training (ARRT) Program on Employment at the University of New Hampshire, which is funded by the National Institute for Disability, Independent Living, and Rehabilitation Research, in the Administration for Community Living, at the U.S. Department of Health and Human Services (DHHS) under grant number 90AREM000401. The contents do not necessarily represent the policy of DHHS and you should not assume endorsement by the federal government (EDGAR, 75.620 (b)).
