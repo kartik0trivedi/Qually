@@ -20,7 +20,6 @@ REQUIRED_PACKAGES = [
     'cryptography>=44.0.0',
     'requests>=2.32.0',
     'py2app>=0.28.0',  # For building macOS applications
-    'pyinstaller>=6.0.0',  # For building executables
 ]
 
 def create_venv():
@@ -80,8 +79,7 @@ required_packages = [
     'numpy',
     'cryptography',
     'requests',
-    'py2app',
-    'pyinstaller'
+    'py2app'
 ]
 
 missing_packages = []

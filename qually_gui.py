@@ -901,6 +901,42 @@ class MainWindow(QMainWindow):
             self.data_manager.file_info['id_column'] = column_name
             gui_logger.info(f"Updated ID column to: {column_name}")
 
+    def _safe_update_temp_slider(self, text):
+        """Safely update temperature slider from text input."""
+        try:
+            if text and text.strip():
+                value = float(text)
+                # Clamp to valid range
+                value = max(0.0, min(2.0, value))
+                self.temp_slider.setValue(int(value * 100))
+        except (ValueError, AttributeError):
+            # Ignore invalid input or missing slider
+            pass
+
+    def _safe_update_top_p_slider(self, text):
+        """Safely update top_p slider from text input."""
+        try:
+            if text and text.strip():
+                value = float(text)
+                # Clamp to valid range
+                value = max(0.0, min(1.0, value))
+                self.top_p_slider.setValue(int(value * 100))
+        except (ValueError, AttributeError):
+            # Ignore invalid input or missing slider
+            pass
+
+    def _safe_update_freq_penalty_slider(self, text):
+        """Safely update frequency penalty slider from text input."""
+        try:
+            if text and text.strip():
+                value = float(text)
+                # Clamp to valid range
+                value = max(-2.0, min(2.0, value))
+                self.freq_penalty_slider.setValue(int(value * 100))
+        except (ValueError, AttributeError):
+            # Ignore invalid input or missing slider
+            pass
+
     def create_log_panel(self):
         self.log_panel = QTextEdit()
         self.log_panel.setReadOnly(True)
@@ -1083,7 +1119,7 @@ class MainWindow(QMainWindow):
         self.temp_input.setFixedWidth(60)
         self.temp_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.temp_input.setFixedHeight(30)
-        self.temp_input.textChanged.connect(lambda t: self.temp_slider.setValue(int(float(t) * 100)))
+        self.temp_input.textChanged.connect(self._safe_update_temp_slider)
         
         # Add tooltip icon for temperature
         temp_info = QPushButton()
@@ -1131,7 +1167,7 @@ class MainWindow(QMainWindow):
         self.top_p_input.setFixedWidth(60)
         self.top_p_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.top_p_input.setFixedHeight(30)
-        self.top_p_input.textChanged.connect(lambda t: self.top_p_slider.setValue(int(float(t) * 100)))
+        self.top_p_input.textChanged.connect(self._safe_update_top_p_slider)
         
         # Add tooltip icon for top p
         top_p_info = QPushButton()
@@ -1179,7 +1215,7 @@ class MainWindow(QMainWindow):
         self.freq_penalty_input.setFixedWidth(60)
         self.freq_penalty_input.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.freq_penalty_input.setFixedHeight(30)
-        self.freq_penalty_input.textChanged.connect(lambda t: self.freq_penalty_slider.setValue(int(float(t) * 100)))
+        self.freq_penalty_input.textChanged.connect(self._safe_update_freq_penalty_slider)
         
         # Add tooltip icon for frequency penalty
         freq_penalty_info = QPushButton()

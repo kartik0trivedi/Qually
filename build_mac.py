@@ -4,6 +4,11 @@ macOS build script for Qually using py2app.
 This script is only for creating a macOS .app bundle.
 
 Requires Python 3.11+ and py2app.
+
+Usage:
+    python build_mac.py py2app
+    
+This will create a dist/Qually.app bundle.
 """
 
 import os
@@ -57,18 +62,18 @@ OPTIONS = {
     'excludes': ['tkinter', 'PySide6', 'PyInstaller'],
     'iconfile': 'resources/app_icon.icns', # Sets the .app bundle icon. Source: Qually_LE2/resources/app_icon.icns
     'plist': {
-        'CFBundleName': 'Qually LE',
-        'CFBundleDisplayName': 'Qually LE',
-        'CFBundleIdentifier': 'in.kartiktrivedi.qually-le',
-        'CFBundleVersion': '1.0.0',
-        'CFBundleShortVersionString': '1.0.0',
+        'CFBundleName': 'Qually',
+        'CFBundleDisplayName': 'Qually',
+        'CFBundleIdentifier': 'in.kartiktrivedi.qually',
+        'CFBundleVersion': '2.0.0',
+        'CFBundleShortVersionString': '2.0.0',
         'LSMinimumSystemVersion': '10.13', # macOS High Sierra or later
         'NSHighResolutionCapable': True
     }
 }
 
 setup(
-    name="Qually LE",
+    name="Qually",
     app=APP,
     data_files=DATA_FILES,
     options={'py2app': OPTIONS},
