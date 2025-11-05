@@ -52,8 +52,10 @@ python qually_gui.py
 
 #### MacOS
 ```bash
-python build_mac.py
+python build_mac.py py2app
 ```
+
+**Note:** `build_mac.py` is a setuptools setup script that requires the `py2app` command. This will create a `dist/Qually.app` bundle.
 
 #### Windows
 ```bash

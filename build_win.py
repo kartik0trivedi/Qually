@@ -15,7 +15,7 @@ SCRIPT_FILE = "qually_gui.py"
 # You may need to convert your 'icon.png' or 'app_icon.icns' to an .ico file.
 # If 'resources/app_icon.ico' doesn't exist, PyInstaller will use a default icon.
 # Alternatively, PyInstaller can sometimes use a .png directly, but .ico is preferred.
-ICON_FILE = "resources/icon.png"  # Using png, recommend converting to .ico for best results
+ICON_FILE = "resources/icon.png" # Using png, recommend converting to .ico for best results
 
 # --- Main ---
 if __name__ == '__main__':
@@ -40,41 +40,29 @@ if __name__ == '__main__':
         '--icon', ICON_FILE,
 
         # Data files
+        # This places 'resources/icon.png' into a 'resources' folder in the bundle
         '--add-data', f'resources{os.sep}icon.png{os.pathsep}resources',
-        '--add-data', f'resources{os.sep}app_icon.icns{os.pathsep}resources',
-        '--add-data', f'resources{os.sep}qually_theme.qss{os.pathsep}resources',
-        '--add-data', f'resources{os.sep}modern_theme.qss{os.pathsep}resources',
+        # This places 'modern_theme.qss' into the root of the bundle (alongside the executable)
+        '--add-data', f'modern_theme.qss{os.pathsep}.',
+        # This places the 'resources/fonts' directory into 'resources/fonts' in the bundle
+        '--add-data', f'resources{os.sep}fonts{os.pathsep}resources{os.sep}fonts',
+        # This places 'resources/experiment_tab_additions.qss' into a 'resources' folder in the bundle
         '--add-data', f'resources{os.sep}experiment_tab_additions.qss{os.pathsep}resources',
-        '--add-data', f'resources{os.sep}fonts{os.sep}Inter_18pt-Regular.ttf{os.pathsep}resources{os.sep}fonts',
-        '--add-data', f'resources{os.sep}fonts{os.sep}Inter_24pt-Regular.ttf{os.pathsep}resources{os.sep}fonts',
-        '--add-data', f'resources{os.sep}fonts{os.sep}Inter_28pt-Regular.ttf{os.pathsep}resources{os.sep}fonts',
 
         # Hidden imports for modules PyInstaller might miss
         '--hidden-import', 'PyQt6.sip',
-        '--hidden-import', 'PyQt6.QtNetwork',
-        '--hidden-import', 'PyQt6.QtCore',
-        '--hidden-import', 'PyQt6.QtGui',
-        '--hidden-import', 'PyQt6.QtWidgets',
-        '--hidden-import', 'cmath',
-        '--hidden-import', 'numpy.core._methods',
-        '--hidden-import', 'numpy.lib.format',
-        '--hidden-import', 'pandas._libs.tslibs.base',
+        '--hidden-import', 'PyQt6.QtNetwork', # For QNetworkAccessManager if used indirectly
+        # Common hidden imports for pandas (add more if build fails on pandas issues)
         '--hidden-import', 'pandas._libs.tslibs.np_datetime',
-        '--hidden-import', 'pandas._libs.tslibs.offsets',
-        '--hidden-import', 'pandas._libs.tslibs.period',
-        '--hidden-import', 'pandas._libs.tslibs.strptime',
-        '--hidden-import', 'pandas._libs.tslibs.timedeltas',
-        '--hidden-import', 'pandas._libs.tslibs.timestamps',
-        '--hidden-import', 'pandas._libs.tslibs.timezones',
-        '--hidden-import', 'pandas._libs.tslibs.tzconversion',
-        '--hidden-import', 'cryptography.hazmat.backends.openssl',
+        '--hidden-import', 'pandas._libs.tslibs.nattype',
+        '--hidden-import', 'pandas._libs.skiplist',
+        '--hidden-import', 'cryptography.hazmat.backends.openssl', # Often needed for cryptography
 
-        # Exclude modules not needed
+        # Exclude modules not needed to potentially reduce bundle size
         '--exclude-module', 'tkinter',
-        '--exclude-module', 'PySide6',
-        '--exclude-module', 'matplotlib',
-        '--exclude-module', 'scipy',
-        '--exclude-module', 'PyInstaller',
+        '--exclude-module', 'PySide6', # Assuming you are using PyQt6 exclusively
+        '--exclude-module', 'matplotlib', # If not used
+        '--exclude-module', 'scipy',      # If not used
 
         SCRIPT_FILE,
     ]
