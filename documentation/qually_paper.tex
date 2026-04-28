@@ -1,0 +1,135 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amsfonts,amssymb}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{geometry}
+\usepackage{enumitem}
+\geometry{margin=1in}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue,
+  citecolor=blue,
+  urlcolor=blue
+}
+
+\title{Qually: An Accessible LLM Audit Tool for Transparent and Reflexive Qualitative Research}
+\author{
+  Kartik Trivedi \\
+  \small University of New Hampshire \\
+  \small \texttt{kartik.trivedi@unh.edu}
+}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Large Language Models (LLMs) are increasingly embedded in qualitative research workflows, yet most interfaces provide limited support for auditability, reproducibility, and reflexive practice. \emph{Qually} is a lightweight, open tool that helps researchers design and run structured LLM experiments, capture prompt--response trails, and export analysis-ready artifacts. The tool supports multiple providers (OpenAI, Anthropic, Google, Mistral, xAI, DeepSeek), encrypted key storage, rate-limited API calls, and GUI-driven data import, prompt management, experiment setup, and results export. We describe the motivation for such a tool, its architecture and implementation, and a use case demonstrating codebook-constrained analysis with audit-ready JSONL exports and memo fields for reflexivity. We conclude with methodological implications for qualitative AI, limitations, and directions for community extension.
+\end{abstract}
+
+\section{Introduction}
+\label{sec:introduction}
+LLMs enable rapid text generation, classification, and synthesis that can augment qualitative workflows. However, three challenges impede rigorous adoption: (i) insufficient \textbf{transparency} of prompt--response histories; (ii) limited \textbf{reproducibility} across models, parameters, and runs; and (iii) weak support for \textbf{reflexive practice} (e.g., documenting researcher stance, uncertainty, and constraints). Tooling that foregrounds these concerns is needed for trustworthiness in qualitative research \cite{lincoln1985naturalistic,braun2006using,miles2014qualitative,bender2021dangers,bommasani2021opportunities}.
+
+\paragraph{Contributions.} This paper presents:
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Qually}, an accessible GUI and Python backend for audit-ready LLM experiments integrating encrypted API key management, rate-limited multi-provider access, and structured exports.
+  \item A \textbf{design} that aligns software affordances with qualitative methods principles: audit trails, memoing, and codebook-constrained procedures.
+  \item A \textbf{use case} showing how researchers can import a corpus, define prompts, and export JSONL/CSV artifacts suitable for downstream analysis and preregistration.
+\end{enumerate}
+
+\section{Related Work}
+\label{sec:related}
+\paragraph{LLMs and qualitative methods.} The promise and risks of generative models in social science include scale and speed benefits alongside concerns about opacity, bias, and reproducibility \cite{bender2021dangers,bommasani2021opportunities}. Established qualitative standards emphasize trustworthiness, reflexivity, and systematic documentation \cite{lincoln1985naturalistic,braun2006using,miles2014qualitative,charmaz2014constructing}. Qually seeks to bridge these domains with pragmatic tooling.
+
+\paragraph{Reproducibility and audit trails.} In ML and HCI, open artifacts and experiment structure are central to reproducibility \cite{pineau2021improving}. In qualitative research, \emph{audit trails} enable credibility and confirmability \cite{lincoln1985naturalistic}. Qually operationalizes these principles via exportable experiment specifications, logs, and outputs tied to prompts, parameters, and model versions.
+
+\paragraph{Existing tools.} Commercial CAQDAS with AI features (e.g., NVivo, Atlas.ti) often restrict transparency into prompt flows and model configuration; research assistants (e.g., Elicit) favor discovery over auditability. Open-source options exist but rarely integrate multi-provider access, encryption, and GUI-based experiment management in one package. Qually aims to complement these ecosystems by focusing on auditability and method alignment.
+
+\section{Design Goals and System Overview}
+\label{sec:overview}
+Qually is designed around four goals: (G1) \textbf{Auditability} of prompt--response trails; (G2) \textbf{Reproducibility} across providers, models, and parameters; (G3) \textbf{Accessibility} via a cross-platform GUI; and (G4) \textbf{Method alignment} with qualitative standards (e.g., memoing, codebooks).
+
+\subsection{High-Level Architecture}
+The core components include:
+\begin{itemize}[leftmargin=*]
+  \item \textbf{APIKeyManager}: encrypted storage and retrieval of provider keys (Fernet symmetric encryption).
+  \item \textbf{PromptManager}: persistent prompt library with tags, optional prepend data, and system/user roles.
+  \item \textbf{ExperimentManager}: structured experiment definitions (conditions = provider+model+parameters) and run orchestration with retry and rate-limiting.
+  \item \textbf{GUI (PyQt)}: tabs for API keys, data import, prompts, experiments, and results; progress and logging widgets.
+\end{itemize}
+
+% TODO: Add architecture diagram when ready
+% \begin{figure}[ht]
+%   \centering
+%   \includegraphics[width=0.85\linewidth]{architecture_placeholder.pdf}
+%   \caption{Qually system overview. Providers and models are configured as conditions; prompts are linked to conditions and data rows; results and logs are exported for audit and analysis.}
+%   \label{fig:architecture}
+% \end{figure}
+
+\subsection{Data Flow}
+A typical session: (1) select a project folder; (2) add API keys for one or more providers; (3) import a CSV/JSON/Excel file and choose \texttt{id} and \texttt{text} columns; (4) author prompts (optionally with prepend text and tags); (5) define experiment conditions (provider, model, temperature, max tokens, etc.); (6) run experiments (threaded to keep the GUI responsive); and (7) export results (CSV/JSONL) and logs.
+
+\section{Implementation}
+\label{sec:implementation}
+\paragraph{Providers and parameters.} Qually currently supports OpenAI, Anthropic, Google (Gemini), Mistral, xAI (Grok), and DeepSeek via REST APIs with configurable parameters (e.g., temperature, top-$p$, penalties, max tokens). Provider-specific defaults are chosen conservatively to reduce rate limits.
+
+\paragraph{Encryption and key management.} API keys are encrypted at rest using the Fernet scheme from the \texttt{cryptography} library. Keys are stored separately from experiment data, and the encryption key is persisted in a dedicated file to allow reuse across sessions.
+
+\paragraph{Rate limiting and retries.} The HTTP session is configured with exponential backoff and jitter; requests throttle based on provider-specific intervals to mitigate 429 and 5xx errors. All responses and errors are logged (with truncation where appropriate).
+
+\paragraph{Data import and export.} CSV/JSON/Excel imports include automatic column detection (e.g., \texttt{text}, \texttt{content}) with manual override. Exports include structured JSONL with \texttt{doc\_id}, prompt metadata, model parameters, and raw text output, enabling downstream coding and analysis.
+
+\paragraph{GUI.} The PyQt interface wraps the backend managers, offering a tabbed workflow with contextual help, preview tables, and progress indicators. The design favors transparency (explicit parameter controls) and discoverability (tooltips, default prompts).
+
+\section{Use Case: Codebook-Constrained Thematic Coding with Audit Trail}
+\label{sec:usecase}
+We illustrate a common pattern: codebook-constrained coding for interview transcripts. The researcher loads a CSV with \texttt{id} and \texttt{text} columns, prepares a system prompt that constrains the model to an existing codebook, and runs multiple conditions (e.g., two providers $\times$ two temperatures).
+
+\subsection{Experiment Setup}
+Prompts can include prepend text with instructions such as: ``Apply only the uploaded codebook; if none fit, use \texttt{UNSURE}.'' Researchers can also append reflexivity notes (e.g., stance, uncertainty) at run time for inclusion in exports.
+
+\subsection{Export Artifacts}
+Qually exports JSONL rows suitable for downstream validation or secondary analysis. Listing~\ref{lst:jsonl} shows a stylized example (abbreviated).
+\begin{lstlisting}[language={},basicstyle=\ttfamily\small,frame=single,caption={Abbreviated JSONL export for audit-ready analysis},label={lst:jsonl}]
+{"doc_id":"INT01","prompt_id":"p001","provider":"openai","model":"gpt-4",
+ "parameters":{"temperature":0.5,"top_p":1.0},
+ "excerpt_span":[120,255],
+ "codes":["ACCESS_BARRIERS","UNSURE"],
+ "rationale":"Mentions platform friction; ambiguity about responsibility.",
+ "confidence":0.72,
+ "memo":"Reflexivity: I expect over-coding competence; checking for bias.",
+ "output_text":"... final model response ..."}
+\end{lstlisting}
+
+\subsection{Methodological Payoff}
+The export design supports inter-rater checks, preregistration of analysis plans, and reproducibility: identical prompts and parameters can be re-run across providers and versions to assess stability.
+
+\section{Evaluation}
+\label{sec:evaluation}
+Our evaluation focuses on functionality and researcher experience rather than model accuracy. We validate (i) cross-provider runs with controlled parameters, (ii) integrity of audit exports, and (iii) responsiveness of the GUI under batch workloads. A formal user study and model performance benchmarking are out of scope but constitute future work.
+
+\section{Ethics, Privacy, and Data Governance}
+\label{sec:ethics}
+Researchers should avoid sending personally identifiable information (PII) to third-party APIs unless governed by IRB or equivalent agreements. Qually stores API keys encrypted and logs selectively; however, researchers remain responsible for data minimization, anonymization, and compliance with institutional policy.
+
+\section{Limitations and Future Work}
+\label{sec:limitations}
+Qually orchestrates provider APIs but does not itself validate the \emph{truth} of outputs, guarantee fair use licensing, or eliminate model bias. Future work includes dataset-level caching, redaction tools, differential privacy options, and a headless CLI for scripted preregistrations and CI pipelines.
+
+\section{Availability}
+\label{sec:availability}
+Source code, releases, and documentation will be hosted in a public repository with versioned archives (e.g., Zenodo DOI). We invite community contributions of new providers, evaluators, and example prompts.
+
+\paragraph{Acknowledgments.} We thank collaborators and early users for feedback on research affordances, audit needs, and GUI usability.
+
+\bibliographystyle{apalike}
+\bibliography{qually_references}
+
+\end{document}

@@ -1,0 +1,38 @@
+\begin{thebibliography}{}
+
+\bibitem[Bender et~al., 2021]{bender2021dangers}
+Bender, E.~M., Gebru, T., McMillan-Major, A., and Shmitchell, M. (2021).
+\newblock On the dangers of stochastic parrots: Can language models be too big?
+\newblock In {\em Proceedings of the 2021 ACM Conference on Fairness, Accountability, and Transparency (FAccT)}, pages 610--623.
+
+\bibitem[Bommasani et~al., 2021]{bommasani2021opportunities}
+Bommasani, R., Hudson, D.~A., Adeli, E., et~al. (2021).
+\newblock On the opportunities and risks of foundation models.
+\newblock {\em arXiv preprint arXiv:2108.07258}.
+
+\bibitem[Braun and Clarke, 2006]{braun2006using}
+Braun, V. and Clarke, V. (2006).
+\newblock Using thematic analysis in psychology.
+\newblock {\em Qualitative Research in Psychology}, 3(2):77--101.
+
+\bibitem[Charmaz, 2014]{charmaz2014constructing}
+Charmaz, K. (2014).
+\newblock {\em Constructing Grounded Theory}.
+\newblock SAGE, 2 edition.
+
+\bibitem[Lincoln and Guba, 1985]{lincoln1985naturalistic}
+Lincoln, Y.~S. and Guba, E.~G. (1985).
+\newblock {\em Naturalistic Inquiry}.
+\newblock SAGE.
+
+\bibitem[Miles et~al., 2014]{miles2014qualitative}
+Miles, M.~B., Huberman, A.~M., and Salda{\~n}a, J. (2014).
+\newblock {\em Qualitative Data Analysis: A Methods Sourcebook}.
+\newblock SAGE Publications, 3 edition.
+
+\bibitem[Pineau et~al., 2021]{pineau2021improving}
+Pineau, J., Vincent-Lamarre, P., Sinha, K., et~al. (2021).
+\newblock Improving reproducibility in machine learning research.
+\newblock {\em Journal of Machine Learning Research}, 22(164):1--20.
+
+\end{thebibliography}

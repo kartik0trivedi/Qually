@@ -56,6 +56,7 @@ results/
 experiments.json
 prompts.csv
 prompts_backup.csv
+documentation/
 
 # Build artifacts
 build_mac.py
@@ -64,3 +65,4 @@ build_win.py
 # Markdown files (except README.md)
 *.md
 !README.md 
+
