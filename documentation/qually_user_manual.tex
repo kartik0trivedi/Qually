@@ -1,0 +1,577 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amsfonts,amssymb}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{geometry}
+\geometry{margin=1in}
+\usepackage{enumitem}
+
+% Code listings configuration
+\lstset{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    backgroundcolor=\color{gray!10},
+    language=Python
+}
+
+% Metadata
+\title{Qually User Manual\\
+\large A Comprehensive Guide to Using the LLM Audit Tool for Social Science Research}
+\author{Kartik Trivedi\\
+\small University of New Hampshire\\
+\small \texttt{hello@kartiktrivedi.in}}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+\newpage
+
+\section{Introduction}
+\label{sec:intro}
+
+This user manual provides step-by-step instructions for using Qually, an LLM Audit Tool designed for social science research. Qually enables researchers to conduct systematic evaluations of Large Language Models (LLMs) across multiple providers without requiring programming expertise.
+
+\subsection{What is Qually?}
+Qually is a graphical user interface (GUI)-based tool that allows researchers to:
+\begin{itemize}
+    \item Conduct experiments across multiple LLM providers (OpenAI, Anthropic, Google, Mistral, Grok, DeepSeek)
+    \item Compare model behaviors and responses
+    \item Manage prompts and experimental conditions
+    \item Export results for analysis
+\end{itemize}
+
+\subsection{Who Should Use This Manual?}
+This manual is designed for:
+\begin{itemize}
+    \item Social science researchers conducting LLM evaluations
+    \item Researchers without programming experience
+    \item Anyone needing systematic LLM auditing capabilities
+\end{itemize}
+
+\section{Installation and Setup}
+\label{sec:installation}
+
+\subsection{Prerequisites}
+Before installing Qually, ensure you have:
+
+\begin{itemize}
+    \item \textbf{Python 3.11 or higher}: Check your Python version by running:
+    \begin{lstlisting}[language=bash]
+python --version
+    \end{lstlisting}
+    \item \textbf{pip package manager}: Usually included with Python
+    \item \textbf{API keys}: Obtain API keys for the LLM providers you want to use:
+    \begin{itemize}
+        \item OpenAI: \url{https://platform.openai.com/api-keys}
+        \item Anthropic: \url{https://console.anthropic.com/}
+        \item Google: \url{https://makersuite.google.com/app/apikey}
+        \item Mistral: \url{https://console.mistral.ai/}
+        \item Grok (xAI): \url{https://x.ai/}
+        \item DeepSeek: \url{https://platform.deepseek.com/}
+    \end{itemize}
+\end{itemize}
+
+\subsection{Installation Steps}
+
+\subsubsection{Step 1: Clone the Repository}
+Clone the Qually repository from GitHub:
+\begin{lstlisting}[language=bash]
+git clone https://github.com/kartik0trivedi/Qually.git
+cd Qually
+\end{lstlisting}
+
+\subsubsection{Step 2: Install Dependencies}
+Install required Python packages:
+\begin{lstlisting}[language=bash]
+pip install -r requirements.txt
+\end{lstlisting}
+
+The required packages include:
+\begin{itemize}
+    \item PyQt6 ($\geq$6.9.0) - GUI framework
+    \item pandas ($\geq$2.2.0) - Data manipulation
+    \item requests ($\geq$2.32.0) - HTTP requests
+    \item cryptography ($\geq$44.0.0) - API key encryption
+\end{itemize}
+
+\subsubsection{Step 3: Run the Application}
+Launch Qually:
+\begin{lstlisting}[language=bash]
+python qually_gui.py
+\end{lstlisting}
+
+\subsection{First Launch}
+When you first launch Qually:
+\begin{enumerate}
+    \item You'll see a welcome screen prompting you to select or create a project folder
+    \item Choose an existing folder or create a new one for your project
+    \item The application will initialize the project structure
+\end{enumerate}
+
+\section{Getting Started}
+\label{sec:getting_started}
+
+\subsection{Creating a Project}
+Qually uses a project-based organization system. Each project is stored in a folder containing:
+\begin{itemize}
+    \item \texttt{api\_keys.json} - Encrypted API keys (encrypted)
+    \item \texttt{encryption\_key.key} - Encryption key for API keys
+    \item \texttt{prompts.json} - Your prompts
+    \item \texttt{experiments.json} - Experiment definitions
+    \item \texttt{results/} - Experimental results
+    \item \texttt{data\_files/} - Imported CSV files
+\end{itemize}
+
+\subsubsection{Creating a New Project}
+\begin{enumerate}
+    \item On the welcome screen, click \textbf{"Select Project Folder"} or \textbf{"Create New Project"}
+    \item Choose a location for your project folder
+    \item Enter a project name
+    \item Click \textbf{"Create"} or \textbf{"Select"}
+\end{enumerate}
+
+\subsection{Adding API Keys}
+API keys are required to interact with LLM providers. Qually stores them securely using encryption.
+
+\subsubsection{Adding Your First API Key}
+\begin{enumerate}
+    \item Click on the \textbf{"API Keys"} tab
+    \item Select a provider from the list (e.g., OpenAI, Anthropic)
+    \item Enter your API key in the input field
+    \item Click \textbf{"Save"} or \textbf{"Test and Save"}
+    \item The key will be encrypted and stored locally
+\end{enumerate}
+
+\subsubsection{Security Notes}
+\begin{itemize}
+    \item API keys are encrypted using Fernet (symmetric encryption)
+    \item Keys are stored locally in your project folder
+    \item Never share your \texttt{api\_keys.json} or \texttt{encryption\_key.key} files
+    \item Each project has its own encryption key
+\end{itemize}
+
+\subsubsection{Supported Providers}
+Table~\ref{tab:providers} shows all supported providers and example models.
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{ll}
+\toprule
+Provider & Example Models \\
+\midrule
+OpenAI & gpt-4, gpt-3.5-turbo, gpt-4-turbo \\
+Anthropic & claude-3-opus, claude-3.5-sonnet, claude-3-haiku \\
+Google & gemini-1.5-pro, gemini-1.5-flash \\
+Mistral & mistral-large-latest, open-mixtral-8x7b \\
+Grok (xAI) & grok-1 \\
+DeepSeek & deepseek-chat, deepseek-coder \\
+\bottomrule
+\end{tabular}
+\caption{Supported LLM Providers and Models}
+\label{tab:providers}
+\end{table}
+
+\subsection{Importing Data}
+Qually supports importing prompts and data via CSV files.
+
+\subsubsection{CSV Format Requirements}
+Your CSV file should have the following structure:
+\begin{itemize}
+    \item \textbf{Header row}: Contains column names
+    \item \textbf{Data rows}: Each row represents a prompt or data entry
+    \item \textbf{Required columns}: At minimum, a column containing your prompts
+    \item \textbf{Optional columns}: Additional metadata (e.g., condition labels, categories)
+\end{itemize}
+
+\subsubsection{Example CSV Format}
+\begin{lstlisting}[language=bash]
+prompt,condition,category
+"Analyze the sentiment of this text: 'I love this product!'",positive,sentiment
+"Analyze the sentiment of this text: 'This is terrible.'",negative,sentiment
+\end{lstlisting}
+
+\subsubsection{Importing a CSV File}
+\begin{enumerate}
+    \item Click on the \textbf{"Data Files"} tab
+    \item Click \textbf{"Import CSV"} or \textbf{"Add Data File"}
+    \item Select your CSV file
+    \item Review the imported data in the table
+    \item Verify column mappings if prompted
+    \item Click \textbf{"Confirm Import"}
+\end{enumerate}
+
+\section{Working with Prompts}
+\label{sec:prompts}
+
+\subsection{Creating Prompts}
+Prompts are the inputs you send to LLMs. You can create prompts individually or import them from CSV files.
+
+\subsubsection{Adding a Single Prompt}
+\begin{enumerate}
+    \item Navigate to the \textbf{"Prompts"} tab
+    \item Click \textbf{"Add Prompt"} or \textbf{"New Prompt"}
+    \item Enter your prompt text
+    \item Optionally add tags or categories
+    \item Click \textbf{"Save"}
+\end{enumerate}
+
+\subsubsection{Managing Prompts}
+The Prompts tab allows you to:
+\begin{itemize}
+    \item View all prompts in a table
+    \item Edit existing prompts
+    \item Delete prompts
+    \item Search/filter prompts
+    \item Export prompts to CSV
+\end{itemize}
+
+\subsection{Prompt Best Practices}
+\begin{itemize}
+    \item \textbf{Be specific}: Clear, specific prompts yield better results
+    \item \textbf{Use examples}: Include examples when possible
+    \item \textbf{Define format}: Specify the desired output format
+    \item \textbf{Test incrementally}: Start with simple prompts, then refine
+\end{itemize}
+
+\section{Running Experiments}
+\label{sec:experiments}
+
+\subsection{Creating an Experiment}
+Experiments allow you to test multiple prompts across different LLM providers and models.
+
+\subsubsection{Basic Experiment Setup}
+\begin{enumerate}
+    \item Go to the \textbf{"Experiments"} tab
+    \item Click \textbf{"Create Experiment"} or \textbf{"New Experiment"}
+    \item Enter an experiment name
+    \item Add a description (optional but recommended)
+    \item Click \textbf{"Create"}
+\end{enumerate}
+
+\subsection{Adding Conditions}
+Conditions define different LLM configurations to test. Each condition specifies:
+\begin{itemize}
+    \item Provider (e.g., OpenAI, Anthropic)
+    \item Model (e.g., gpt-4, claude-3.5-sonnet)
+    \item Parameters (temperature, max tokens, etc.)
+\end{itemize}
+
+\subsubsection{Adding a Condition}
+\begin{enumerate}
+    \item In your experiment, click \textbf{"Add Condition"}
+    \item Enter a condition name (e.g., "GPT-4 Baseline")
+    \item Select a provider from the dropdown
+    \item Select a model from the dropdown
+    \item Configure parameters:
+    \begin{itemize}
+        \item \textbf{Temperature}: Controls randomness (0.0-2.0)
+        \item \textbf{Max Tokens}: Maximum response length
+        \item \textbf{Top P}: Nucleus sampling parameter
+        \item \textbf{Frequency Penalty}: Reduce repetition
+        \item \textbf{Presence Penalty}: Encourage topic diversity
+    \end{itemize}
+    \item Click \textbf{"Add Condition"}
+\end{enumerate}
+
+\subsubsection{Example: Multi-Condition Experiment}
+A typical experiment might include:
+\begin{itemize}
+    \item Condition 1: GPT-4 (temperature=0.7)
+    \item Condition 2: Claude-3.5-Sonnet (temperature=0.7)
+    \item Condition 3: Gemini-1.5-Pro (temperature=0.7)
+\end{itemize}
+
+This allows you to compare responses across providers.
+
+\subsection{Selecting Prompts}
+After creating an experiment, select which prompts to test:
+\begin{enumerate}
+    \item In the experiment view, find the prompt selection section
+    \item Check the prompts you want to include
+    \item You can select all prompts or specific ones
+    \item Verify your selection
+\end{enumerate}
+
+\subsection{Executing an Experiment}
+Once your experiment is set up:
+\begin{enumerate}
+    \item Review your experiment setup
+    \item Ensure all conditions have valid API keys
+    \item Click \textbf{"Run Experiment"} or \textbf{"Start"}
+    \item Monitor progress in the progress bar
+    \item View log messages for status updates
+\end{enumerate}
+
+\subsubsection{During Execution}
+While the experiment runs:
+\begin{itemize}
+    \item A progress bar shows completion status
+    \item Log messages indicate current activity
+    \item The interface remains responsive
+    \item You can cancel the experiment if needed
+\end{itemize}
+
+\subsubsection{Rate Limiting}
+Qually automatically handles rate limiting:
+\begin{itemize}
+    \item Default delays: 1-2 seconds between requests
+    \item Provider-specific settings in \texttt{settings.json}
+    \item Automatic retries on rate limit errors
+    \item Progress tracking for long experiments
+\end{itemize}
+
+\section{Results and Export}
+\label{sec:results}
+
+\subsection{Viewing Results}
+After an experiment completes:
+\begin{enumerate}
+    \item Navigate to the \textbf{"Results"} tab
+    \item Select your experiment from the list
+    \item View results in a table format
+    \item Columns include:
+    \begin{itemize}
+        \item Prompt ID
+        \item Condition name
+        \item Provider and model
+        \item Response text
+        \item Timestamp
+        \item Parameters used
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Filtering and Sorting}
+You can filter and sort results:
+\begin{itemize}
+    \item \textbf{Filter by experiment}: Select specific experiments
+    \item \textbf{Filter by condition}: View specific conditions
+    \item \textbf{Filter by provider}: Focus on specific providers
+    \item \textbf{Sort columns}: Click column headers to sort
+    \item \textbf{Search}: Use search box to find specific prompts or responses
+\end{itemize}
+
+\subsection{Exporting Data}
+Export your results for analysis in other tools (e.g., R, Python, Excel).
+
+\subsubsection{Export to CSV}
+\begin{enumerate}
+    \item In the Results tab, click \textbf{"Export"} or \textbf{"Download CSV"}
+    \item Choose export options:
+    \begin{itemize}
+        \item Select experiments to include
+        \item Choose columns to export
+        \item Set filename
+    \end{itemize}
+    \item Click \textbf{"Export"}
+    \item Save the file to your desired location
+\end{enumerate}
+
+\subsubsection{CSV Export Format}
+The exported CSV includes:
+\begin{itemize}
+    \item Experiment ID and name
+    \item Condition details
+    \item Prompt text
+    \item Response text
+    \item Timestamps
+    \item Model parameters
+    \item Metadata
+\end{itemize}
+
+\subsubsection{Results File Structure}
+Results are stored in \texttt{results/} folder with filenames:
+\begin{lstlisting}[language=bash]
+results/experiment_<ID>_<timestamp>.csv
+\end{lstlisting}
+
+\section{Advanced Features}
+\label{sec:advanced}
+
+\subsection{Project Management}
+\subsubsection{Switching Projects}
+\begin{enumerate}
+    \item Go to \textbf{File} $\rightarrow$ \textbf{Open Project}
+    \item Select a different project folder
+    \item The application will load the new project
+\end{enumerate}
+
+\subsubsection{Backing Up Projects}
+To back up a project:
+\begin{enumerate}
+    \item Copy the entire project folder
+    \item Include all subfolders (\texttt{results/}, \texttt{data\_files/})
+    \item Preserve \texttt{api\_keys.json} and \texttt{encryption\_key.key} for API key access
+\end{enumerate}
+
+\subsection{Customizing Rate Limits}
+You can adjust rate limiting in \texttt{settings.json}:
+\begin{lstlisting}[basicstyle=\ttfamily\small, showstringspaces=false]
+{
+    "rate_limiting": {
+        "openai": 1.0,
+        "anthropic": 2.0,
+        "google": 1.5,
+        "mistral": 1.0,
+        "grok": 1.0,
+        "deepseek": 1.0
+    }
+}
+\end{lstlisting}
+
+Values are in seconds (minimum delay between requests).
+
+\subsection{Batch Processing}
+For large experiments:
+\begin{itemize}
+    \item Qually handles batches automatically
+    \item Progress is saved incrementally
+    \item If interrupted, you can resume (results are saved)
+    \item Monitor progress through the log panel
+\end{itemize}
+
+\section{Troubleshooting}
+\label{sec:troubleshooting}
+
+\subsection{Common Issues}
+
+\subsubsection{API Key Errors}
+\textbf{Problem}: "API key not found" or "Invalid API key"
+
+\textbf{Solutions}:
+\begin{itemize}
+    \item Verify API key is correctly entered
+    \item Check that the API key is active
+    \item Ensure you have credits/quota available
+    \item Try testing the key in the provider's console
+\end{itemize}
+
+\subsubsection{Rate Limit Errors}
+\textbf{Problem}: "Rate limit exceeded" or "429 errors"
+
+\textbf{Solutions}:
+\begin{itemize}
+    \item Increase rate limiting delays in \texttt{settings.json}
+    \item Wait before resuming the experiment
+    \item Check your API quota/limits
+    \item Use fewer concurrent requests
+\end{itemize}
+
+\subsubsection{Connection Errors}
+\textbf{Problem}: "Connection failed" or network errors
+
+\textbf{Solutions}:
+\begin{itemize}
+    \item Check your internet connection
+    \item Verify firewall settings
+    \item Try again after a few minutes
+    \item Check provider status pages
+\end{itemize}
+
+\subsubsection{Application Errors}
+\textbf{Problem}: Application crashes or freezes
+
+\textbf{Solutions}:
+\begin{itemize}
+    \item Check log files in \texttt{logs/} folder
+    \item Restart the application
+    \item Verify Python and package versions
+    \item Report the issue with log files
+\end{itemize}
+
+\subsection{Getting Help}
+\begin{itemize}
+    \item \textbf{GitHub Issues}: \url{https://github.com/kartik0trivedi/Qually/issues}
+    \item \textbf{Documentation}: Check the main README.md
+    \item \textbf{Email}: hello@kartiktrivedi.in
+    \item \textbf{Website}: \url{https://www.kartiktrivedi.in}
+\end{itemize}
+
+\section{Best Practices}
+\label{sec:best_practices}
+
+\subsection{Experimental Design}
+\begin{itemize}
+    \item \textbf{Plan your experiment}: Define research questions before starting
+    \item \textbf{Start small}: Test with a few prompts before large experiments
+    \item \textbf{Document conditions}: Use descriptive condition names
+    \item \textbf{Keep notes}: Document any deviations or issues
+\end{itemize}
+
+\subsection{Data Management}
+\begin{itemize}
+    \item \textbf{Organize prompts}: Use clear naming conventions
+    \item \textbf{Back up regularly}: Copy project folders periodically
+    \item \textbf{Version control}: Consider using Git for prompt management
+    \item \textbf{Export results}: Export important results immediately
+\end{itemize}
+
+\subsection{Reproducibility}
+\begin{itemize}
+    \item \textbf{Save experiments}: Keep experiment definitions
+    \item \textbf{Document parameters}: Note all model parameters
+    \item \textbf{Record timestamps}: Note when experiments were run
+    \item \textbf{Version prompts}: Track prompt versions/changes
+\end{itemize}
+
+\section{Appendix}
+\label{sec:appendix}
+
+\subsection{Keyboard Shortcuts}
+\begin{itemize}
+    \item \textbf{Ctrl+N} (Cmd+N on Mac): New experiment
+    \item \textbf{Ctrl+O} (Cmd+O on Mac): Open project
+    \item \textbf{Ctrl+S} (Cmd+S on Mac): Save
+    \item \textbf{Ctrl+E} (Cmd+E on Mac): Export results
+\end{itemize}
+
+\subsection{File Structure Reference}
+\begin{lstlisting}[language=bash, basicstyle=\ttfamily\small]
+project_folder/
+  api_keys.json          # Encrypted API keys
+  encryption_key.key     # Encryption key
+  prompts.json           # Prompt definitions
+  experiments.json      # Experiment definitions
+  settings.json         # Application settings
+  results/               # Experiment results
+    experiment_*.csv
+  data_files/           # Imported CSV files
+    *.csv
+  logs/                 # Application logs
+    qually_gui.log
+\end{lstlisting}
+
+\subsection{Model Parameter Guidelines}
+\begin{table}[ht]
+\centering
+\begin{tabular}{lll}
+\toprule
+Parameter & Typical Range & Description \\
+\midrule
+Temperature & 0.0-2.0 & Higher = more random \\
+Max Tokens & 1-4096+ & Maximum response length \\
+Top P & 0.0-1.0 & Nucleus sampling \\
+Frequency Penalty & -2.0-2.0 & Reduce repetition \\
+Presence Penalty & -2.0-2.0 & Encourage diversity \\
+\bottomrule
+\end{tabular}
+\caption{Model Parameter Guidelines}
+\label{tab:parameters}
+\end{table}
+
+\section*{Acknowledgments}
+Funding for this application was provided by the Advanced Rehabilitation Research and Training (ARRT) Program on Employment at the University of New Hampshire, which is funded by the National Institute for Disability, Independent Living, and Rehabilitation Research, in the Administration for Community Living, at the U.S. Department of Health and Human Services (DHHS) under grant number 90AREM000401. The contents do not necessarily represent the policy of DHHS and you should not assume endorsement by the federal government (EDGAR, 75.620 (b)).
+
+\section*{Version Information}
+This manual corresponds to Qually version 2.0.0 (LE2).
+
+\end{document}
+
