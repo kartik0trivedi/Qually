@@ -454,6 +454,7 @@ class MainWindow(QMainWindow):
             self.experiment_manager = qually_tool.ExperimentManager(self.project_folder)
             self.api_key_manager = self.experiment_manager.api_key_manager
             self.prompt_manager = self.experiment_manager.prompt_manager
+            self.prompt_manager.data_manager = self.data_manager
 
             # Create main tab widget
             self.tabs = QTabWidget()
@@ -1665,7 +1666,7 @@ class MainWindow(QMainWindow):
             try:
                 api_key = self.experiment_manager.api_key_manager.get_key(provider)
                 if api_key:
-                    provider_instance = ProviderFactory.create_provider(provider, api_key)
+                    provider_instance = qually_tool.ProviderFactory.create_provider(provider, api_key)
                     models = provider_instance.get_available_models()
                     for model in models:
                         model_combo.addItem(model)

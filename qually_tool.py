@@ -503,7 +503,7 @@ class OpenAIProvider(LLMProvider):
             "model": model,
             "messages": messages,
             "temperature": temperature,
-            "max_tokens": max_tokens,
+            "max_completion_tokens": max_tokens,
             "top_p": top_p,
             "frequency_penalty": frequency_penalty,
             "presence_penalty": presence_penalty
@@ -591,7 +591,7 @@ class OpenAIProvider(LLMProvider):
         """Get available models for OpenAI."""
         api_url = "https://api.openai.com/v1/models"
         headers = {"Authorization": f"Bearer {self.api_key}"}
-        default_models = sorted(["gpt-4", "gpt-4-turbo", "gpt-3.5-turbo"]) # Define default list once
+        default_models = sorted(["gpt-4o", "gpt-4o-mini", "o1", "o1-mini", "o3-mini", "gpt-4", "gpt-4-turbo", "gpt-3.5-turbo"]) # Define default list once
         response = None
 
         try:
@@ -606,10 +606,10 @@ class OpenAIProvider(LLMProvider):
 
             models = models_data["data"]
 
-            # Filter for chat models (usually contain 'gpt') and sort them
-            chat_models = sorted([model["id"] for model in models if "id" in model and "gpt" in model["id"]])
+            # Filter for chat models (usually contain 'gpt' or 'o1'/'o3') and sort them
+            chat_models = sorted([model["id"] for model in models if "id" in model and ("gpt" in model["id"] or "o1" in model["id"] or "o3" in model["id"])])
             if not chat_models:
-                 logger.warning("No models containing 'gpt' found via API. Returning defaults.")
+                 logger.warning("No models containing 'gpt' or 'o' found via API. Returning defaults.")
                  return default_models
             return chat_models
 
@@ -896,7 +896,7 @@ class GoogleProvider(LLMProvider):
         # Google provides an API endpoint for listing models
         api_url = f"https://generativelanguage.googleapis.com/v1beta/models?key={self.api_key}"
         headers = {"Content-Type": "application/json"}
-        default_models = sorted(["gemini-1.5-pro-latest", "gemini-1.5-flash-latest", "gemini-1.0-pro"])
+        default_models = sorted(["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-pro-exp", "gemini-1.5-pro-latest", "gemini-1.5-flash-latest"])
         response = None
 
         try:
@@ -1229,7 +1229,7 @@ class GrokProvider(LLMProvider):
         # Verify the correct endpoint from xAI documentation. '/v1/models' is common.
         api_url = "https://api.x.ai/v1/models"
         headers = {"Authorization": f"Bearer {self.api_key}"}
-        default_models = sorted(["grok-1", "grok-1.5-flash", "grok-1.5"]) # Example hardcoded models
+        default_models = sorted(["grok-3", "grok-2", "grok-1.5", "grok-1"]) # Example hardcoded models
         response = None
 
         try:
@@ -1382,7 +1382,7 @@ class DeepSeekProvider(LLMProvider):
         # DeepSeek might have a models endpoint, often similar to OpenAI's
         api_url = "https://api.deepseek.com/v1/models" # Check if this endpoint exists and works
         headers = {"Authorization": f"Bearer {self.api_key}"}
-        default_models = sorted(["deepseek-chat", "deepseek-coder"])
+        default_models = sorted(["deepseek-chat", "deepseek-coder", "deepseek-reasoner"])
         response = None
 
         try:
