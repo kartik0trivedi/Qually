@@ -6,7 +6,6 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import (
     QFileDialog,
-    QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -18,7 +17,6 @@ from PyQt6.QtWidgets import (
 
 from ui.theme import resources_path
 
-
 gui_logger = logging.getLogger("QuallyGUI")
 
 
@@ -28,73 +26,87 @@ class WelcomeScreen(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.project_folder = None
+        self.setObjectName("welcomeScreen")
         self._build_ui()
 
     def _build_ui(self):
-        layout = QVBoxLayout(self)
-        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.setSpacing(20)
+        outer = QVBoxLayout(self)
+        outer.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
+        card = QWidget()
+        card.setObjectName("welcomeCard")
+        card.setFixedWidth(520)
+
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(40, 40, 40, 40)
+        layout.setSpacing(16)
+
+        # Logo
+        logo_lbl = QLabel()
         img_path = resources_path / "icon.png"
-        logo_label = QLabel()
-        logo_pixmap = QPixmap(str(img_path))
-        if not logo_pixmap.isNull():
-            scaled_pixmap = logo_pixmap.scaled(
-                200,
-                200,
-                Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.SmoothTransformation,
+        pixmap = QPixmap(str(img_path))
+        if not pixmap.isNull():
+            logo_lbl.setPixmap(
+                pixmap.scaled(80, 80, Qt.AspectRatioMode.KeepAspectRatio,
+                              Qt.TransformationMode.SmoothTransformation)
             )
-            logo_label.setPixmap(scaled_pixmap)
         else:
-            gui_logger.warning(f"Logo file not found or invalid: {img_path}")
-            logo_label.setText("[Logo Not Found]")
+            gui_logger.warning(f"Logo not found: {img_path}")
+            logo_lbl.setText("Q")
+        logo_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(logo_lbl)
 
-        logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(logo_label)
+        # Title / subtitle
+        title_lbl = QLabel("Qually")
+        title_lbl.setObjectName("welcomeTitle")
+        title_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(title_lbl)
 
-        welcome_label = QLabel("Welcome to Qually")
-        welcome_label.setStyleSheet("font-size: 28px; font-weight: bold;")
-        welcome_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(welcome_label)
+        subtitle_lbl = QLabel("LLM audit workspace for research projects")
+        subtitle_lbl.setObjectName("welcomeSubtitle")
+        subtitle_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(subtitle_lbl)
 
-        description = QLabel(
-            "Qually helps you audit and analyze LLM outputs for social science research.\n"
-            "Please select a folder where your project files (prompts, experiments, results, keys) will be stored."
+        layout.addSpacing(8)
+
+        # Project folder field
+        folder_field_lbl = QLabel("Project folder")
+        folder_field_lbl.setObjectName("welcomeFieldLabel")
+        layout.addWidget(folder_field_lbl)
+
+        folder_row = QHBoxLayout()
+        self.folder_path_input = QLineEdit()
+        self.folder_path_input.setReadOnly(True)
+        self.folder_path_input.setPlaceholderText("No folder selected")
+        self.folder_path_input.setObjectName("welcomeFolderInput")
+
+        browse_btn = QPushButton("Browse")
+        browse_btn.setObjectName("welcomeBrowseButton")
+        browse_btn.setFixedWidth(80)
+        browse_btn.clicked.connect(self.select_project_folder)
+
+        folder_row.addWidget(self.folder_path_input, 1)
+        folder_row.addWidget(browse_btn)
+        layout.addLayout(folder_row)
+
+        helper_lbl = QLabel(
+            "Your project folder stores encrypted API keys, prompts, experiments, and results."
         )
-        description.setStyleSheet("font-size: 14px; color: #555;")
-        description.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        description.setWordWrap(True)
-        layout.addWidget(description)
+        helper_lbl.setObjectName("welcomeHelperText")
+        helper_lbl.setWordWrap(True)
+        layout.addWidget(helper_lbl)
 
-        folder_group = QFrame()
-        folder_group.setFrameShape(QFrame.Shape.StyledPanel)
-        folder_layout = QHBoxLayout(folder_group)
+        layout.addSpacing(8)
 
-        self.folder_path_label = QLineEdit("No folder selected")
-        self.folder_path_label.setReadOnly(True)
-        self.folder_path_label.setStyleSheet(
-            "padding: 5px; border: 1px solid #ccc; border-radius: 3px; background-color: #eee;"
-        )
-        folder_layout.addWidget(QLabel("Project Folder:"))
-        folder_layout.addWidget(self.folder_path_label, 1)
+        self.open_btn = QPushButton("Open Project")
+        self.open_btn.setObjectName("welcomeOpenButton")
+        self.open_btn.setEnabled(False)
+        self.open_btn.clicked.connect(self._emit_project_selected)
+        layout.addWidget(self.open_btn)
 
-        select_button = QPushButton("...")
-        select_button.setToolTip("Select Project Folder")
-        select_button.setFixedWidth(40)
-        select_button.clicked.connect(self.select_project_folder)
-        folder_layout.addWidget(select_button)
-
-        layout.addWidget(folder_group)
-
-        self.continue_button = QPushButton("Start Qually")
-        self.continue_button.setStyleSheet("font-size: 16px; padding: 10px 20px;")
-        self.continue_button.clicked.connect(self._emit_project_selected)
-        self.continue_button.setEnabled(False)
-        layout.addWidget(self.continue_button, 0, Qt.AlignmentFlag.AlignCenter)
+        outer.addWidget(card)
 
     def select_project_folder(self):
-        """Show folder selection dialog and validate writability."""
         gui_logger.info("Opening project folder selection dialog.")
         folder = QFileDialog.getExistingDirectory(
             self,
@@ -102,32 +114,30 @@ class WelcomeScreen(QWidget):
             str(Path.home()),
             QFileDialog.Option.ShowDirsOnly | QFileDialog.Option.DontResolveSymlinks,
         )
+        if not folder:
+            return
 
-        if folder:
-            folder_path = Path(folder)
-            gui_logger.info(f"Folder selected: {folder_path}")
-            try:
-                test_file = folder_path / f"qually_write_test_{int(time.time())}.txt"
-                with open(test_file, "w") as f:
-                    f.write("test")
-                test_file.unlink()
+        folder_path = Path(folder)
+        try:
+            test_file = folder_path / f"qually_write_test_{int(time.time())}.txt"
+            test_file.write_text("test")
+            test_file.unlink()
 
-                self.project_folder = str(folder_path)
-                self.folder_path_label.setText(self.project_folder)
-                self.continue_button.setEnabled(True)
-                gui_logger.info(f"Project folder set and validated: {self.project_folder}")
+            self.project_folder = str(folder_path)
+            self.folder_path_input.setText(self.project_folder)
+            self.open_btn.setEnabled(True)
+            gui_logger.info(f"Project folder validated: {self.project_folder}")
 
-            except Exception as e:
-                gui_logger.error(f"Selected folder '{folder}' is not writable: {e}")
-                QMessageBox.critical(
-                    self,
-                    "Folder Error",
-                    f"The selected folder is not writable or accessible:\n\n{folder}\n\n"
-                    f"Error: {str(e)}\n\nPlease select a different folder.",
-                )
-                self.project_folder = None
-                self.folder_path_label.setText("No folder selected")
-                self.continue_button.setEnabled(False)
+        except Exception as e:
+            gui_logger.error(f"Folder not writable: {e}")
+            QMessageBox.critical(
+                self,
+                "Folder Error",
+                f"The selected folder is not writable or accessible:\n\n{folder}\n\nError: {str(e)}",
+            )
+            self.project_folder = None
+            self.folder_path_input.clear()
+            self.open_btn.setEnabled(False)
 
     def _emit_project_selected(self):
         if self.project_folder:

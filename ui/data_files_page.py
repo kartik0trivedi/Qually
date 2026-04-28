@@ -5,7 +5,7 @@ import time
 from pathlib import Path
 
 import pandas as pd
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
     QFileDialog,
     QComboBox,
@@ -22,6 +22,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from ui.widgets import SectionHeader
 
 gui_logger = logging.getLogger("QuallyGUI")
 
@@ -38,6 +39,13 @@ class DataFilesPage(QWidget):
 
     def _build_ui(self):
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(16)
+
+        layout.addWidget(SectionHeader(
+            "Data",
+            "Import a CSV, JSON, or Excel file, then select the ID and text columns.",
+        ))
 
         file_group = QGroupBox("Data File Selection")
         file_layout = QHBoxLayout(file_group)

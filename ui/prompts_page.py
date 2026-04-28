@@ -20,6 +20,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from ui.widgets import SectionHeader
 
 gui_logger = logging.getLogger("QuallyGUI")
 
@@ -36,6 +37,13 @@ class PromptsPage(QWidget):
 
     def _build_ui(self):
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(16)
+
+        layout.addWidget(SectionHeader(
+            "Prompts",
+            "Build prompts from your data file and manage the prompt library.",
+        ))
 
         self.data_warning_label = QLabel()
         self.data_warning_label.setStyleSheet(
