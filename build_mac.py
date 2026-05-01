@@ -23,29 +23,38 @@ APP = ['qually_gui.py']
 DATA_FILES = [
     # Files to be placed in YourApp.app/Contents/Resources/
     ('', [
-        'resources/icon.png',                     # Source: Qually_LE2/resources/icon.png
-        'resources/app_icon.icns',                # Source: Qually_LE2/resources/app_icon.icns
-        'resources/qually_theme.qss',             # Source: Qually_LE2/resources/qually_theme.qss
-        'resources/modern_theme.qss',             # Source: Qually_LE2/resources/modern_theme.qss
-        'resources/experiment_tab_additions.qss'  # Source: Qually_LE2/resources/experiment_tab_additions.qss
+        'resources/icon.png',
+        'resources/app_icon.icns',
+        'resources/qually_theme.qss',
+        'resources/modern_theme.qss',
+        'resources/experiment_tab_additions.qss',
     ]),
     # Fonts to be placed in YourApp.app/Contents/Resources/fonts/
     ('fonts', [
         'resources/fonts/Inter_18pt-Regular.ttf',
         'resources/fonts/Inter_24pt-Regular.ttf',
-        'resources/fonts/Inter_28pt-Regular.ttf'
-    ])
+        'resources/fonts/Inter_28pt-Regular.ttf',
+        'resources/fonts/Inter-Regular.ttf',
+        'resources/fonts/Inter-Medium.ttf',
+        'resources/fonts/Inter-SemiBold.ttf',
+    ]),
+    # Icons to be placed in YourApp.app/Contents/Resources/icons/
+    ('icons', [
+        'resources/icons/dropdown_arrow.svg',
+    ]),
 ]
 
 # py2app specific build options
 OPTIONS = {
     'argv_emulation': False,
-    'packages': ['PyQt6', 'pandas', 'numpy', 'cryptography', 'requests'],
+    'packages': ['PyQt6', 'pandas', 'numpy', 'cryptography', 'requests', 'ui', 'qtawesome', 'qtpy'],
     'includes': [
-        'PyQt6.QtCore', 
-        'PyQt6.QtGui', 
-        'PyQt6.QtWidgets', 
+        'PyQt6.QtCore',
+        'PyQt6.QtGui',
+        'PyQt6.QtWidgets',
+        'PyQt6.QtSvg',
         'PyQt6.sip',
+        'qually_tool',
         'cmath',
         'numpy.core._methods',
         'numpy.lib.format',
@@ -65,8 +74,8 @@ OPTIONS = {
         'CFBundleName': 'Qually',
         'CFBundleDisplayName': 'Qually',
         'CFBundleIdentifier': 'in.kartiktrivedi.qually',
-        'CFBundleVersion': '2.0.0',
-        'CFBundleShortVersionString': '2.0.0',
+        'CFBundleVersion': '2.1.0',
+        'CFBundleShortVersionString': '2.1.0',
         'LSMinimumSystemVersion': '10.13', # macOS High Sierra or later
         'NSHighResolutionCapable': True
     }

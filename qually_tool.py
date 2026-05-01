@@ -503,7 +503,7 @@ class OpenAIProvider(LLMProvider):
             "model": model,
             "messages": messages,
             "temperature": temperature,
-            "max_tokens": max_tokens,
+            "max_completion_tokens": max_tokens,
             "top_p": top_p,
             "frequency_penalty": frequency_penalty,
             "presence_penalty": presence_penalty
@@ -591,7 +591,7 @@ class OpenAIProvider(LLMProvider):
         """Get available models for OpenAI."""
         api_url = "https://api.openai.com/v1/models"
         headers = {"Authorization": f"Bearer {self.api_key}"}
-        default_models = sorted(["gpt-4", "gpt-4-turbo", "gpt-3.5-turbo"]) # Define default list once
+        default_models = sorted(["gpt-4o", "gpt-4o-mini", "o1", "o1-mini", "o3-mini", "gpt-4", "gpt-4-turbo", "gpt-3.5-turbo"]) # Define default list once
         response = None
 
         try:
@@ -606,10 +606,10 @@ class OpenAIProvider(LLMProvider):
 
             models = models_data["data"]
 
-            # Filter for chat models (usually contain 'gpt') and sort them
-            chat_models = sorted([model["id"] for model in models if "id" in model and "gpt" in model["id"]])
+            # Filter for chat models (usually contain 'gpt' or 'o1'/'o3') and sort them
+            chat_models = sorted([model["id"] for model in models if "id" in model and ("gpt" in model["id"] or "o1" in model["id"] or "o3" in model["id"])])
             if not chat_models:
-                 logger.warning("No models containing 'gpt' found via API. Returning defaults.")
+                 logger.warning("No models containing 'gpt' or 'o' found via API. Returning defaults.")
                  return default_models
             return chat_models
 
@@ -896,7 +896,7 @@ class GoogleProvider(LLMProvider):
         # Google provides an API endpoint for listing models
         api_url = f"https://generativelanguage.googleapis.com/v1beta/models?key={self.api_key}"
         headers = {"Content-Type": "application/json"}
-        default_models = sorted(["gemini-1.5-pro-latest", "gemini-1.5-flash-latest", "gemini-1.0-pro"])
+        default_models = sorted(["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-pro-exp", "gemini-1.5-pro-latest", "gemini-1.5-flash-latest"])
         response = None
 
         try:
@@ -1229,7 +1229,7 @@ class GrokProvider(LLMProvider):
         # Verify the correct endpoint from xAI documentation. '/v1/models' is common.
         api_url = "https://api.x.ai/v1/models"
         headers = {"Authorization": f"Bearer {self.api_key}"}
-        default_models = sorted(["grok-1", "grok-1.5-flash", "grok-1.5"]) # Example hardcoded models
+        default_models = sorted(["grok-3", "grok-2", "grok-1.5", "grok-1"]) # Example hardcoded models
         response = None
 
         try:
@@ -1382,7 +1382,7 @@ class DeepSeekProvider(LLMProvider):
         # DeepSeek might have a models endpoint, often similar to OpenAI's
         api_url = "https://api.deepseek.com/v1/models" # Check if this endpoint exists and works
         headers = {"Authorization": f"Bearer {self.api_key}"}
-        default_models = sorted(["deepseek-chat", "deepseek-coder"])
+        default_models = sorted(["deepseek-chat", "deepseek-coder", "deepseek-reasoner"])
         response = None
 
         try:
@@ -1574,8 +1574,13 @@ class ExperimentManager:
 
         return condition_id
 
-    def run_experiment(self, experiment_id: str, prompt_ids: List[str]) -> Optional[Dict]:
+    def run_experiment(self, experiment_id: str, prompt_ids: List[str], num_runs: int = 1, progress_callback=None) -> Optional[Dict]:
         """Run an experiment with the given prompts and return results."""
+        try:
+            num_runs = max(1, int(num_runs))
+        except (TypeError, ValueError):
+            num_runs = 1
+
         # Find experiment
         experiment = self.get_experiment(experiment_id)
 
@@ -1607,6 +1612,7 @@ class ExperimentManager:
             "experiment_id": experiment_id,
             "experiment_name": experiment.get("name", "Unknown Experiment"),
             "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(), # Use UTC time
+            "num_runs": num_runs,
             "conditions": {}, # Will store details of conditions run
             "prompt_results": {} # Will store results per prompt
         }
@@ -1618,7 +1624,7 @@ class ExperimentManager:
 
 
         # Run each condition for each prompt
-        total_generations = len(conditions_to_run) * len(prompts_to_run)
+        total_generations = len(conditions_to_run) * len(prompts_to_run) * num_runs
         current_generation = 0
         logger.info(f"Starting experiment '{experiment.get('name', '')}'. Total generations to attempt: {total_generations}")
 
@@ -1658,7 +1664,6 @@ class ExperimentManager:
 
             # Process each prompt for this condition
             for prompt in prompts_to_run:
-                current_generation += 1
                 prompt_id = prompt["id"]
                 prompt_text = prompt.get("prompt_text", "")
                 system_prompt = prompt.get("system_prompt", "")
@@ -1679,47 +1684,58 @@ class ExperimentManager:
                 # Ensure the 'model' parameter used for generation matches the condition's model
                 full_parameters["model"] = model
 
-                # Generate response
-                response_data = {} # To store the result of generation
-                try:
-                    logger.info(f"({current_generation}/{total_generations}) Generating for prompt '{prompt_id}' with condition '{condition.get('name', condition_id)}' (Provider: {provider_name}, Model: {model})")
+                runs = []
+                for run_idx in range(1, num_runs + 1):
+                    current_generation += 1
 
-                    start_time = time.monotonic()
-                    response = provider.generate(
-                        prompt=prompt_text,
-                        system_prompt=system_prompt,
-                        parameters=full_parameters # Pass the combined parameters
-                    )
-                    end_time = time.monotonic()
-                    duration = end_time - start_time
-                    logger.info(f"Response received in {duration:.2f} seconds.")
+                    # Generate response
+                    response_data = {} # To store the result of generation
+                    start_time = None
+                    try:
+                        logger.info(f"({current_generation}/{total_generations}) Generating run {run_idx}/{num_runs} for prompt '{prompt_id}' with condition '{condition.get('name', condition_id)}' (Provider: {provider_name}, Model: {model})")
 
-                    # Store response data
-                    response_data = {
-                        "text": response.get("text", "Error: No text returned"), # Handle missing text
-                        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                        "duration_seconds": duration,
-                        "raw_response": response.get("raw_response"), # Include raw response if available
-                        "error": response.get("error") # Include error if generation failed (e.g., content filter)
-                    }
-                    if response_data["error"]:
-                         logger.warning(f"Generation for prompt '{prompt_id}', condition '{condition.get('name', condition_id)}' resulted in an error: {response_data['error']}")
+                        start_time = time.monotonic()
+                        response = provider.generate(
+                            prompt=prompt_text,
+                            system_prompt=system_prompt,
+                            parameters=full_parameters # Pass the combined parameters
+                        )
+                        end_time = time.monotonic()
+                        duration = end_time - start_time
+                        logger.info(f"Response received in {duration:.2f} seconds.")
+
+                        # Store response data
+                        response_data = {
+                            "run_index": run_idx,
+                            "text": response.get("text", "Error: No text returned"), # Handle missing text
+                            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                            "duration_seconds": duration,
+                            "raw_response": response.get("raw_response"), # Include raw response if available
+                            "error": response.get("error") # Include error if generation failed (e.g., content filter)
+                        }
+                        if response_data["error"]:
+                             logger.warning(f"Generation for prompt '{prompt_id}', condition '{condition.get('name', condition_id)}', run {run_idx} resulted in an error: {response_data['error']}")
 
 
-                except Exception as e:
-                    # Catch unexpected errors during the generate call itself
-                    end_time = time.monotonic()
-                    duration = end_time - start_time if 'start_time' in locals() else None
-                    logger.error(f"Unexpected error during generation for prompt '{prompt_id}', condition '{condition.get('name', condition_id)}': {str(e)}", exc_info=True) # Log traceback
-                    response_data = {
-                        "text": f"Error: Unexpected failure - {str(e)}",
-                        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                        "duration_seconds": duration,
-                        "error": f"Unexpected failure: {str(e)}"
-                    }
+                    except Exception as e:
+                        # Catch unexpected errors during the generate call itself
+                        end_time = time.monotonic()
+                        duration = end_time - start_time if start_time is not None else None
+                        logger.error(f"Unexpected error during generation for prompt '{prompt_id}', condition '{condition.get('name', condition_id)}', run {run_idx}: {str(e)}", exc_info=True) # Log traceback
+                        response_data = {
+                            "run_index": run_idx,
+                            "text": f"Error: Unexpected failure - {str(e)}",
+                            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                            "duration_seconds": duration,
+                            "error": f"Unexpected failure: {str(e)}"
+                        }
+
+                    runs.append(response_data)
+                    if progress_callback:
+                        progress_callback(current_generation, total_generations)
 
                 # Add response data (or error data) to results
-                results["prompt_results"][prompt_id]["condition_results"][condition_id] = response_data
+                results["prompt_results"][prompt_id]["condition_results"][condition_id] = {"runs": runs}
 
 
         # Save results to JSON file
@@ -1736,6 +1752,26 @@ class ExperimentManager:
             logger.error(f"Error saving results JSON to {results_file_path}: {str(e)}")
 
         return results
+
+    def _condition_result_runs(self, condition_result: Dict) -> List[Dict]:
+        """Normalize old and new condition result shapes to a list of runs."""
+        if not condition_result:
+            return []
+        if isinstance(condition_result, dict) and isinstance(condition_result.get("runs"), list):
+            runs = condition_result.get("runs", [])
+        elif isinstance(condition_result, dict):
+            runs = [condition_result]
+        else:
+            return []
+
+        normalized_runs = []
+        for index, run in enumerate(runs, start=1):
+            if not isinstance(run, dict):
+                continue
+            run_data = run.copy()
+            run_data.setdefault("run_index", index)
+            normalized_runs.append(run_data)
+        return normalized_runs
 
     def export_results_csv(self, results: Dict) -> str:
         """Export results to CSV file for analysis."""
@@ -1775,30 +1811,32 @@ class ExperimentManager:
                         logger.warning(f"Could not JSON serialize parameters for condition {condition_id}: {e}. Saving as string.")
                         parameters_str = str(condition_details.get("parameters", {}))
 
-                    response_text = condition_result.get("text", "")
-                    error = condition_result.get("error", "") # Get error string if present
-                    response_timestamp = condition_result.get("timestamp", "") # Get response timestamp
-                    duration = condition_result.get("duration_seconds", None) # Get duration
+                    for run in self._condition_result_runs(condition_result):
+                        response_text = run.get("text", "")
+                        error = run.get("error", "") # Get error string if present
+                        response_timestamp = run.get("timestamp", "") # Get response timestamp
+                        duration = run.get("duration_seconds", None) # Get duration
 
-                    row = {
-                        "experiment_id": experiment_id,
-                        "experiment_name": results.get("experiment_name", "Unknown Experiment"),
-                        "run_timestamp": results.get("timestamp", ""), # Timestamp of the overall run
-                        "prompt_id": prompt_id,
-                        "prompt_text": prompt_text,
-                        "system_prompt": system_prompt,
-                        "prompt_tags": tags,
-                        "condition_id": condition_id,
-                        "condition_name": condition_name,
-                        "provider": provider,
-                        "model": model,
-                        "parameters": parameters_str,
-                        "response_text": response_text,
-                        "response_timestamp": response_timestamp,
-                        "response_duration_sec": duration,
-                        "error": error # Include the error message string
-                    }
-                    rows.append(row)
+                        row = {
+                            "experiment_id": experiment_id,
+                            "experiment_name": results.get("experiment_name", "Unknown Experiment"),
+                            "run_timestamp": results.get("timestamp", ""), # Timestamp of the overall run
+                            "prompt_id": prompt_id,
+                            "prompt_text": prompt_text,
+                            "system_prompt": system_prompt,
+                            "prompt_tags": tags,
+                            "condition_id": condition_id,
+                            "condition_name": condition_name,
+                            "run_index": run.get("run_index", 1),
+                            "provider": provider,
+                            "model": model,
+                            "parameters": parameters_str,
+                            "response_text": response_text,
+                            "response_timestamp": response_timestamp,
+                            "response_duration_sec": duration,
+                            "error": error # Include the error message string
+                        }
+                        rows.append(row)
 
             if not rows:
                 logger.warning("No data rows generated for CSV export. Experiment might have failed or had no valid results.")
@@ -1810,7 +1848,7 @@ class ExperimentManager:
             column_order = [
                 "experiment_id", "experiment_name", "run_timestamp",
                 "prompt_id", "prompt_text", "system_prompt", "prompt_tags",
-                "condition_id", "condition_name", "provider", "model", "parameters",
+                "condition_id", "condition_name", "run_index", "provider", "model", "parameters",
                 "response_text", "response_timestamp", "response_duration_sec", "error"
             ]
             # Ensure all expected columns exist, add missing ones with default value (e.g., None or "")
@@ -1888,18 +1926,21 @@ class ExperimentManager:
                     condition_result = prompt_data.get("condition_results", {}).get(condition_id)
                     anonymized_condition_label = condition_mapping.get(condition_id) # Should always exist if condition_id is from sorted keys
 
-                    if condition_result and anonymized_condition_label:
-                        response_text = condition_result.get("text", "")
-                        error = condition_result.get("error", "") # Include error status if needed
+                    runs = self._condition_result_runs(condition_result)
+                    if runs and anonymized_condition_label:
+                        for run in runs:
+                            run_index = run.get("run_index", 1)
+                            response_text = run.get("text", "")
+                            error = run.get("error", "") # Include error status if needed
 
-                        # Add response under its anonymized label
-                        responses_for_prompt[f"{anonymized_condition_label}_response"] = response_text
-                        if error: # Optionally add error column per condition
-                             responses_for_prompt[f"{anonymized_condition_label}_error"] = error
+                            # Add response under its anonymized label
+                            responses_for_prompt[f"{anonymized_condition_label}_run_{run_index}_response"] = response_text
+                            if error: # Optionally add error column per condition
+                                 responses_for_prompt[f"{anonymized_condition_label}_run_{run_index}_error"] = error
                     elif anonymized_condition_label:
                          # Handle case where a condition was defined but didn't run/produce results for this prompt
-                         responses_for_prompt[f"{anonymized_condition_label}_response"] = "[NO RESULT]"
-                         responses_for_prompt[f"{anonymized_condition_label}_error"] = "[NO RESULT]"
+                         responses_for_prompt[f"{anonymized_condition_label}_run_1_response"] = "[NO RESULT]"
+                         responses_for_prompt[f"{anonymized_condition_label}_run_1_error"] = "[NO RESULT]"
 
 
                 # Combine base prompt info with all anonymized responses for that prompt
@@ -1920,12 +1961,36 @@ class ExperimentManager:
             # Generate condition column names in sorted order (A, B, C...)
             condition_response_cols = []
             condition_error_cols = []
+            def run_column_sort_key(col):
+                 parts = col.split("_")
+                 try:
+                      return int(parts[3])
+                 except (IndexError, ValueError):
+                      return 0
+
             for i in range(len(sorted_condition_ids)):
                  label = f"Condition_{chr(65+i)}"
-                 condition_response_cols.append(f"{label}_response")
+                 matching_response_cols = sorted(
+                     (
+                         col for row in rows for col in row
+                         if col.startswith(f"{label}_run_") and col.endswith("_response")
+                     ),
+                     key=run_column_sort_key,
+                 )
+                 for col in matching_response_cols:
+                     if col not in condition_response_cols:
+                         condition_response_cols.append(col)
                  # Check if any error columns were actually created before adding them
-                 if any(f"{label}_error" in row for row in rows):
-                      condition_error_cols.append(f"{label}_error")
+                 matching_error_cols = sorted(
+                     (
+                         col for row in rows for col in row
+                         if col.startswith(f"{label}_run_") and col.endswith("_error")
+                     ),
+                     key=run_column_sort_key,
+                 )
+                 for col in matching_error_cols:
+                     if col not in condition_error_cols:
+                         condition_error_cols.append(col)
 
 
             column_order = base_cols + condition_response_cols + condition_error_cols

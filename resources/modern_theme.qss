@@ -198,15 +198,38 @@ QGroupBox {
     font-weight: bold;
     border: 1px solid #dee2e6;
     border-radius: 4px;
-    margin-top: 16px;
+    margin-top: 28px;
     padding-top: 16px;
 }
 
 QGroupBox::title {
     subcontrol-origin: margin;
     subcontrol-position: top left;
-    padding: 0 8px;
+    left: 10px;
+    top: 6px;
+    padding: 0 4px;
     color: #495057;
+    background-color: #ffffff;
+}
+
+/* Checkable group box indicator */
+QGroupBox::indicator {
+    width: 14px;
+    height: 14px;
+    margin-right: 4px;
+    subcontrol-origin: content;
+}
+
+QGroupBox::indicator:unchecked {
+    border: 2px solid #adb5bd;
+    border-radius: 3px;
+    background-color: #ffffff;
+}
+
+QGroupBox::indicator:checked {
+    border: 2px solid #007bff;
+    border-radius: 3px;
+    background-color: #007bff;
 }
 
 /* Scroll Areas */
@@ -280,8 +303,304 @@ QToolTip {
     border-radius: 4px;
 }
 
-/* API Keys Tab Specific Styles */
-QPushButton[text="Test"] {
-    min-width: 60px;
-    padding: 4px 8px;
-} 
+/* ============================================================
+   Welcome Screen
+   ============================================================ */
+#welcomeScreen {
+    background-color: #f0f4f8;
+}
+
+#welcomeCard {
+    background-color: #ffffff;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+}
+
+#welcomeTitle {
+    font-size: 32px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+#welcomeSubtitle {
+    font-size: 15px;
+    color: #64748b;
+}
+
+#welcomeFieldLabel {
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+}
+
+#welcomeFolderInput {
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 8px 12px;
+    color: #374151;
+    min-height: 36px;
+}
+
+QPushButton#welcomeBrowseButton {
+    background-color: #f8fafc;
+    color: #374151;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-weight: 500;
+    min-height: 36px;
+}
+
+QPushButton#welcomeBrowseButton:hover {
+    background-color: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+QPushButton#welcomeBrowseButton:pressed {
+    background-color: #e2e8f0;
+}
+
+#welcomeHelperText {
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+QPushButton#welcomeOpenButton {
+    background-color: #2563eb;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    padding: 12px 24px;
+    font-size: 15px;
+    font-weight: 600;
+    min-height: 44px;
+}
+
+QPushButton#welcomeOpenButton:hover {
+    background-color: #1d4ed8;
+}
+
+QPushButton#welcomeOpenButton:pressed {
+    background-color: #1e40af;
+}
+
+QPushButton#welcomeOpenButton:disabled {
+    background-color: #94a3b8;
+    color: #e2e8f0;
+}
+
+/* ============================================================
+   Sidebar Navigation
+   ============================================================ */
+#sidebar {
+    background-color: #f8fafc;
+    border-right: 1px solid #e2e8f0;
+    min-width: 180px;
+    max-width: 180px;
+}
+
+#sidebarBrand {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1e293b;
+    letter-spacing: 0.5px;
+}
+
+#sidebarProjectLabel {
+    font-size: 11px;
+    color: #94a3b8;
+    padding: 0 20px;
+}
+
+QPushButton#navButton {
+    background-color: transparent;
+    color: #64748b;
+    border: none;
+    border-left: 3px solid transparent;
+    border-radius: 0px;
+    padding: 11px 20px;
+    text-align: left;
+    font-size: 14px;
+    font-weight: 500;
+    min-height: 42px;
+}
+
+QPushButton#navButton:hover {
+    background-color: #f1f5f9;
+    color: #1e293b;
+}
+
+QPushButton#navButton:checked {
+    background-color: #eff6ff;
+    color: #1d4ed8;
+    border-left: 3px solid #2563eb;
+    font-weight: 600;
+}
+
+/* ============================================================
+   Section Headers
+   ============================================================ */
+#sectionTitle {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+#sectionSubtitle {
+    font-size: 13px;
+    color: #64748b;
+}
+
+/* ============================================================
+   Table column headers (API Keys page)
+   ============================================================ */
+QLabel#tableColumnHeader {
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 4px;
+}
+
+/* ============================================================
+   Status Badges
+   ============================================================ */
+QLabel#statusBadge {
+    border-radius: 10px;
+    padding: 3px 10px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+QLabel#statusBadge[badgeState="connected"] {
+    background-color: #dcfce7;
+    color: #16a34a;
+}
+
+QLabel#statusBadge[badgeState="not_configured"] {
+    background-color: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+}
+
+QLabel#statusBadge[badgeState="invalid"] {
+    background-color: #fee2e2;
+    color: #dc2626;
+}
+
+QLabel#statusBadge[badgeState="testing"] {
+    background-color: #fef9c3;
+    color: #a16207;
+}
+
+QLabel#statusBadge[badgeState="unknown"] {
+    background-color: #f1f5f9;
+    color: #94a3b8;
+}
+
+/* ============================================================
+   Empty State
+   ============================================================ */
+#emptyStateIcon {
+    font-size: 40px;
+}
+
+#emptyStateHeading {
+    font-size: 16px;
+    font-weight: 600;
+    color: #64748b;
+}
+
+#emptyStateSubtitle {
+    font-size: 13px;
+    color: #94a3b8;
+}
+
+/* ============================================================
+   Results page
+   ============================================================ */
+#resultInfoFrame {
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 4px;
+}
+
+#resultExpName {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+QLabel#resultCounter {
+    font-size: 13px;
+    color: #374151;
+    padding: 2px 8px;
+    background-color: #f1f5f9;
+    border-radius: 4px;
+}
+
+QLabel#resultCounterErrors {
+    font-size: 13px;
+    color: #dc2626;
+    padding: 2px 8px;
+    background-color: #fee2e2;
+    border-radius: 4px;
+}
+
+/* ============================================================
+   Section Cards  (replaces QGroupBox on main pages)
+   ============================================================ */
+#sectionCardTitle {
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+}
+
+#sectionCardContent {
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+}
+
+QPushButton#sectionCardToggle {
+    background-color: transparent;
+    color: #374151;
+    border: none;
+    padding: 0px;
+    min-height: 0;
+}
+
+QPushButton#sectionCardToggle:hover {
+    background-color: #f1f5f9;
+    border-radius: 3px;
+}
+
+/* ============================================================
+   Primary action button variant
+   ============================================================ */
+QPushButton#primaryButton {
+    background-color: #2563eb;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 20px;
+    font-weight: 600;
+}
+
+QPushButton#primaryButton:hover {
+    background-color: #1d4ed8;
+}
+
+QPushButton#primaryButton:pressed {
+    background-color: #1e40af;
+}
+
+QPushButton#primaryButton:disabled {
+    background-color: #94a3b8;
+    color: #e2e8f0;
+}
+
