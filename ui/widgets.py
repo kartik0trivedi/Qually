@@ -1,10 +1,11 @@
 import logging
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, QSize, pyqtSignal
 from PyQt6.QtWidgets import (
     QDoubleSpinBox,
     QHBoxLayout,
     QLabel,
+    QPushButton,
     QSlider,
     QVBoxLayout,
     QWidget,
@@ -86,6 +87,61 @@ class StatusBadge(QLabel):
         # Re-apply QSS so property-based rules take effect immediately.
         self.style().unpolish(self)
         self.style().polish(self)
+
+
+class SectionCard(QWidget):
+    """Standard section container: bold title above a bordered content area.
+
+    Use card.content_layout (QVBoxLayout) to add child widgets or layouts.
+    Pass collapsible=True to get a chevron toggle that hides/shows the content.
+    """
+
+    def __init__(self, title: str, collapsible: bool = False, collapsed: bool = False, parent=None):
+        super().__init__(parent)
+
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(4)
+
+        # Header row
+        header = QWidget()
+        header_layout = QHBoxLayout(header)
+        header_layout.setContentsMargins(2, 0, 2, 0)
+        header_layout.setSpacing(6)
+
+        title_lbl = QLabel(title)
+        title_lbl.setObjectName("sectionCardTitle")
+        header_layout.addWidget(title_lbl)
+        header_layout.addStretch()
+
+        self._toggle_btn = None
+        if collapsible:
+            self._toggle_btn = QPushButton("▼" if not collapsed else "▶")
+            self._toggle_btn.setObjectName("sectionCardToggle")
+            self._toggle_btn.setCheckable(True)
+            self._toggle_btn.setChecked(not collapsed)
+            self._toggle_btn.setFixedSize(QSize(24, 24))
+            self._toggle_btn.clicked.connect(self._on_toggle)
+            header_layout.addWidget(self._toggle_btn)
+
+        outer.addWidget(header, 0)
+
+        # Content area — stretch=1 so it fills the card when the card is stretched
+        # by its parent, keeping items pinned to the top inside the border.
+        self._content = QWidget()
+        self._content.setObjectName("sectionCardContent")
+        self.content_layout = QVBoxLayout(self._content)
+        self.content_layout.setContentsMargins(12, 12, 12, 12)
+        self.content_layout.setSpacing(8)
+        self.content_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        outer.addWidget(self._content, 1)
+
+        if collapsible:
+            self._content.setVisible(not collapsed)
+
+    def _on_toggle(self, checked: bool):
+        self._content.setVisible(checked)
+        self._toggle_btn.setText("▼" if checked else "▶")
 
 
 class ParameterSlider(QWidget):

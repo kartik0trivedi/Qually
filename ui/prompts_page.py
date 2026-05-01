@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QIcon
+import qtawesome as qta
 from PyQt6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
@@ -119,7 +119,7 @@ class PromptsPage(QWidget):
         form_layout.addWidget(self.prompt_edit)
 
         self.create_from_data_button = QPushButton("Create Prompts from Data File")
-        self.create_from_data_button.setIcon(QIcon.fromTheme("document-new"))
+        self.create_from_data_button.setIcon(qta.icon("fa5s.plus", color="white"))
         self.create_from_data_button.clicked.connect(self.create_prompts_from_data)
         form_layout.addWidget(self.create_from_data_button, 0, Qt.AlignmentFlag.AlignRight)
         form_layout.addStretch()
@@ -148,15 +148,15 @@ class PromptsPage(QWidget):
         buttons_layout.setContentsMargins(0, 5, 0, 0)
 
         delete_selected_button = QPushButton("Delete Selected")
-        delete_selected_button.setIcon(QIcon.fromTheme("edit-delete"))
+        delete_selected_button.setIcon(qta.icon("fa5s.trash-alt", color="white"))
         delete_selected_button.clicked.connect(self.delete_selected_prompts)
 
         clear_all_button = QPushButton("Clear All")
-        clear_all_button.setIcon(QIcon.fromTheme("edit-clear"))
+        clear_all_button.setIcon(qta.icon("fa5s.times-circle", color="white"))
         clear_all_button.clicked.connect(self.clear_all_prompts)
 
         export_button = QPushButton("Export Prompts")
-        export_button.setIcon(QIcon.fromTheme("document-save"))
+        export_button.setIcon(qta.icon("fa5s.save", color="white"))
         export_button.clicked.connect(self.export_prompts)
 
         buttons_layout.addWidget(delete_selected_button)

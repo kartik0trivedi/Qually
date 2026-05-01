@@ -3,15 +3,18 @@ import logging
 import os
 
 from PyQt6.QtWidgets import (
-    QApplication, QComboBox, QDialog, QDialogButtonBox, QFormLayout,
+    QAbstractItemView, QApplication, QComboBox, QDialog, QDialogButtonBox, QFormLayout,
     QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMessageBox,
-    QPushButton, QProgressBar, QSizePolicy, QSlider, QSplitter,
+    QPushButton, QProgressBar, QSizePolicy, QSlider, QSpinBox, QSplitter,
     QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 from PyQt6.QtCore import Qt, QSize, pyqtSignal
-from PyQt6.QtGui import QIcon, QDoubleValidator, QIntValidator
+from PyQt6.QtGui import QDoubleValidator, QIntValidator
+
+import qtawesome as qta
 
 import qually_tool
+from ui.widgets import SectionCard
 from ui.workers import ExperimentRunner
 
 logger = logging.getLogger("QuallyGUI")
@@ -49,83 +52,66 @@ class ExperimentsPage(QWidget):
         left_layout = QVBoxLayout(left_panel)
         left_layout.setContentsMargins(10, 10, 10, 10)
         left_layout.setSpacing(10)
-        left_layout.addWidget(self._build_experiment_details_group())
-        left_layout.addWidget(self._build_conditions_group())
+        left_layout.addWidget(self._build_experiment_details_group(), 0)
+        left_layout.addWidget(self._build_conditions_group(), 1)
         return left_panel
 
     def _build_experiment_details_group(self):
-        exp_group = QGroupBox("Create New Experiment")
-        exp_layout = QFormLayout(exp_group)
-        exp_layout.setContentsMargins(10, 10, 10, 10)
-        exp_layout.setSpacing(5)
+        card = SectionCard("Create New Experiment")
+        card.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
 
-        name_desc_layout = QHBoxLayout()
-        name_desc_layout.setSpacing(10)
+        row = QHBoxLayout()
+        row.setSpacing(10)
 
         name_form = QFormLayout()
         name_form.setSpacing(5)
         self.experiment_name_edit = QLineEdit()
         self.experiment_name_edit.setPlaceholderText("Enter experiment name")
         name_form.addRow("Name:", self.experiment_name_edit)
-        name_desc_layout.addLayout(name_form)
+        row.addLayout(name_form)
 
         desc_form = QFormLayout()
         desc_form.setSpacing(5)
         self.experiment_desc_edit = QLineEdit()
         self.experiment_desc_edit.setPlaceholderText("Enter a brief description (optional)")
         desc_form.addRow("Description:", self.experiment_desc_edit)
-        name_desc_layout.addLayout(desc_form)
+        row.addLayout(desc_form)
 
-        exp_layout.addRow(name_desc_layout)
-        return exp_group
+        card.content_layout.addLayout(row)
+        return card
 
     def _build_conditions_group(self):
-        conditions_group = QGroupBox("Add Conditions")
-        conditions_layout = QVBoxLayout(conditions_group)
-        conditions_layout.setSpacing(10)
+        card = SectionCard("Add Conditions")
 
-        basic_params_form = QFormLayout()
-        basic_params_form.setSpacing(10)
-        basic_params_form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
+        form = QFormLayout()
+        form.setSpacing(10)
+        form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
 
         self.condition_name_input = QLineEdit()
         self.condition_name_input.setPlaceholderText("Enter a descriptive name for this condition")
-        basic_params_form.addRow("Condition Name:", self.condition_name_input)
+        form.addRow("Condition Name:", self.condition_name_input)
 
         provider_model_layout = QHBoxLayout()
         self.provider_combo = QComboBox()
         provider_model_layout.addWidget(QLabel("Provider:"))
         provider_model_layout.addWidget(self.provider_combo)
-
         self.model_combo = QComboBox()
         provider_model_layout.addWidget(QLabel("Model:"))
         provider_model_layout.addWidget(self.model_combo)
-
         refresh_button = QPushButton("Refresh Models")
-        refresh_button.setIcon(QIcon.fromTheme("view-refresh"))
+        refresh_button.setIcon(qta.icon("fa5s.sync-alt", color="white"))
         refresh_button.clicked.connect(self.refresh_models_list)
         provider_model_layout.addWidget(refresh_button)
-        basic_params_form.addRow(provider_model_layout)
+        form.addRow(provider_model_layout)
 
         tokens_layout = QHBoxLayout()
         self.tokens_input = QLineEdit("500")
         self.tokens_input.setValidator(QIntValidator(1, 100000))
         self.tokens_input.setMaximumWidth(100)
-
         tokens_info = QPushButton()
-        info_icon = QIcon.fromTheme("help-about")
-        if info_icon.isNull():
-            tokens_info.setText("ⓘ")
-            tokens_info.setStyleSheet(
-                "QPushButton { color: #666; font-weight: bold; border: none; padding: 0px; background: transparent; }"
-                "QPushButton:hover { color: #000; }"
-            )
-        else:
-            tokens_info.setIcon(info_icon)
-            tokens_info.setIconSize(QSize(16, 16))
-            tokens_info.setStyleSheet(
-                "QPushButton { border: none; padding: 0px; background: transparent; }"
-            )
+        tokens_info.setIcon(qta.icon("fa5s.info-circle", color="#6c757d"))
+        tokens_info.setIconSize(QSize(16, 16))
+        tokens_info.setStyleSheet("QPushButton { border: none; padding: 0px; background: transparent; }")
         tokens_info.setToolTip(
             "Tokens are pieces of text that the model processes. As a rough guide:\n\n"
             "• 1 token ≈ 4 characters or 3/4 of a word\n"
@@ -137,24 +123,21 @@ class ExperimentsPage(QWidget):
         tokens_layout.addWidget(self.tokens_input)
         tokens_layout.addWidget(tokens_info)
         tokens_layout.addStretch()
-        basic_params_form.addRow("Max Tokens:", tokens_layout)
-        conditions_layout.addLayout(basic_params_form)
+        form.addRow("Max Tokens:", tokens_layout)
 
-        conditions_layout.addWidget(self._build_generation_params_group())
+        card.content_layout.addLayout(form)
+        card.content_layout.addWidget(self._build_generation_params_group())
 
         add_condition_button = QPushButton("Add Condition")
-        add_condition_button.setIcon(QIcon.fromTheme("list-add"))
+        add_condition_button.setIcon(qta.icon("fa5s.plus-circle", color="white"))
         add_condition_button.clicked.connect(self.add_condition_from_form)
-        conditions_layout.addWidget(add_condition_button, 0, Qt.AlignmentFlag.AlignRight)
+        card.content_layout.addWidget(add_condition_button, 0, Qt.AlignmentFlag.AlignRight)
 
-        return conditions_group
+        return card
 
     def _build_generation_params_group(self):
-        params_group = QGroupBox("Generation Parameters")
-        params_group.setProperty("advanced", True)
-        params_group.setCheckable(True)
-        params_group.setChecked(False)
-        params_layout = QFormLayout(params_group)
+        card = SectionCard("Generation Parameters", collapsible=True, collapsed=True)
+        params_layout = QFormLayout()
         params_layout.setSpacing(10)
         params_layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
 
@@ -200,7 +183,8 @@ class ExperimentsPage(QWidget):
         )
         params_layout.addRow("Frequency Penalty:", freq_layout)
 
-        return params_group
+        card.content_layout.addLayout(params_layout)
+        return card
 
     def _make_slider(self, min_val, max_val, default, dbl_min, dbl_max, decimals, default_text, tick_interval):
         slider = QSlider(Qt.Orientation.Horizontal)
@@ -241,10 +225,10 @@ class ExperimentsPage(QWidget):
         right_panel = QWidget()
         right_layout = QVBoxLayout(right_panel)
         right_layout.setContentsMargins(10, 10, 10, 10)
+        right_layout.setSpacing(10)
 
-        # Current conditions
-        conditions_list_group = QGroupBox("Current Conditions")
-        conditions_list_layout = QVBoxLayout(conditions_list_group)
+        # Current Conditions card
+        cc_card = SectionCard("Current Conditions")
 
         self.conditions_table = QTableWidget()
         self.conditions_table.setAlternatingRowColors(True)
@@ -255,33 +239,28 @@ class ExperimentsPage(QWidget):
         self.conditions_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.conditions_table.verticalHeader().setVisible(False)
         self.conditions_table.setMinimumHeight(100)
-        conditions_list_layout.addWidget(self.conditions_table)
+        cc_card.content_layout.addWidget(self.conditions_table)
 
         condition_buttons_layout = QHBoxLayout()
         delete_cond_btn = QPushButton("Delete Selected")
-        delete_cond_btn.setIcon(QIcon.fromTheme("edit-delete"))
+        delete_cond_btn.setIcon(qta.icon("fa5s.trash-alt", color="white"))
         delete_cond_btn.clicked.connect(self.delete_selected_conditions)
-
         clear_cond_btn = QPushButton("Clear All")
-        clear_cond_btn.setIcon(QIcon.fromTheme("edit-clear"))
+        clear_cond_btn.setIcon(qta.icon("fa5s.times-circle", color="white"))
         clear_cond_btn.clicked.connect(self.clear_all_conditions)
-
         save_exp_btn = QPushButton("Save Experiment")
         save_exp_btn.setProperty("class", "primary")
-        save_exp_btn.setIcon(QIcon.fromTheme("document-save"))
+        save_exp_btn.setIcon(qta.icon("fa5s.save", color="white"))
         save_exp_btn.clicked.connect(self.add_experiment_from_form)
-
         condition_buttons_layout.addWidget(delete_cond_btn)
         condition_buttons_layout.addWidget(clear_cond_btn)
         condition_buttons_layout.addStretch()
         condition_buttons_layout.addWidget(save_exp_btn)
-        conditions_list_layout.addLayout(condition_buttons_layout)
-        right_layout.addWidget(conditions_list_group)
+        cc_card.content_layout.addLayout(condition_buttons_layout)
+        right_layout.addWidget(cc_card)
 
-        # Existing experiments
-        experiments_label = QLabel("Existing Experiments")
-        experiments_label.setStyleSheet("font-weight: bold;")
-        right_layout.addWidget(experiments_label)
+        # Existing Experiments card
+        ee_card = SectionCard("Existing Experiments")
 
         self.experiments_table = QTableWidget()
         self.experiments_table.setAlternatingRowColors(True)
@@ -291,29 +270,28 @@ class ExperimentsPage(QWidget):
         self.experiments_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
         self.experiments_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.experiments_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.experiments_table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.experiments_table.verticalHeader().setVisible(False)
         self.experiments_table.doubleClicked.connect(self.show_experiment_details_for_selected)
-        right_layout.addWidget(self.experiments_table)
+        ee_card.content_layout.addWidget(self.experiments_table)
 
         experiment_buttons_layout = QHBoxLayout()
         view_details_btn = QPushButton("View Details")
-        view_details_btn.setIcon(QIcon.fromTheme("document-properties"))
+        view_details_btn.setIcon(qta.icon("fa5s.file-alt", color="white"))
         view_details_btn.clicked.connect(self.show_experiment_details_for_selected)
-
         delete_exp_btn = QPushButton("Delete Selected")
-        delete_exp_btn.setIcon(QIcon.fromTheme("edit-delete"))
+        delete_exp_btn.setIcon(qta.icon("fa5s.trash-alt", color="white"))
         delete_exp_btn.clicked.connect(self.delete_selected_experiments)
-
         run_btn = QPushButton("Run Selected")
         run_btn.setProperty("class", "primary")
-        run_btn.setIcon(QIcon.fromTheme("system-run"))
+        run_btn.setIcon(qta.icon("fa5s.play", color="white"))
         run_btn.clicked.connect(self.show_run_experiment_dialog_for_selected)
-
         experiment_buttons_layout.addWidget(view_details_btn)
         experiment_buttons_layout.addWidget(delete_exp_btn)
         experiment_buttons_layout.addStretch()
         experiment_buttons_layout.addWidget(run_btn)
-        right_layout.addLayout(experiment_buttons_layout)
+        ee_card.content_layout.addLayout(experiment_buttons_layout)
+        right_layout.addWidget(ee_card)
 
         return right_panel
 
@@ -624,17 +602,17 @@ class ExperimentsPage(QWidget):
     # ------------------------------------------------------------------
 
     def show_run_experiment_dialog_for_selected(self):
-        selected_items = self.experiments_table.selectedItems()
-        if not selected_items:
-            QMessageBox.warning(self, "No Selection", "Please select an experiment to run.")
+        selected_rows = self.experiments_table.selectionModel().selectedRows()
+        if not selected_rows:
+            QMessageBox.warning(self, "No Selection", "Please select one or more experiments to run.")
             return
 
-        row = selected_items[0].row()
-        experiment_id = self.experiments_table.item(row, 0).text()
-        experiment = self.experiment_manager.get_experiment(experiment_id)
-        if not experiment:
-            QMessageBox.critical(self, "Error", "Selected experiment not found.")
-            return
+        experiment_ids = [self.experiments_table.item(r.row(), 0).text() for r in selected_rows]
+        for experiment_id in experiment_ids:
+            experiment = self.experiment_manager.get_experiment(experiment_id)
+            if not experiment:
+                QMessageBox.critical(self, "Error", f"Selected experiment not found: {experiment_id}")
+                return
 
         prompts = self.prompt_manager.list_prompts()
         if not prompts:
@@ -671,32 +649,121 @@ class ExperimentsPage(QWidget):
             if reply == QMessageBox.StandardButton.No:
                 return
 
+        self.data_prompts_for_run = data_prompts if data_prompts else prompts
+        self._show_run_config_dialog(experiment_ids)
+
+    def _compute_run_summary(self, experiment_ids, num_runs):
+        total_conditions = sum(
+            len((self.experiment_manager.get_experiment(eid) or {}).get("conditions", []))
+            for eid in experiment_ids
+        )
+        num_prompts = len(getattr(self, "data_prompts_for_run", []) or [])
+        total_calls = total_conditions * num_prompts * num_runs
+        return {
+            "num_experiments": len(experiment_ids),
+            "total_conditions": total_conditions,
+            "num_prompts": num_prompts,
+            "num_runs": num_runs,
+            "total_calls": total_calls,
+        }
+
+    def _show_run_config_dialog(self, experiment_ids):
+        config_dialog = QDialog(self)
+        config_dialog.setWindowTitle(f"Run Experiments ({len(experiment_ids)} selected)")
+        config_layout = QVBoxLayout(config_dialog)
+
+        form_layout = QFormLayout()
+        runs_spin = QSpinBox()
+        runs_spin.setRange(1, 100)
+        runs_spin.setValue(3)
+        form_layout.addRow("Runs per prompt per condition:", runs_spin)
+        config_layout.addLayout(form_layout)
+
+        summary_label = QLabel()
+        summary_label.setWordWrap(True)
+        config_layout.addWidget(summary_label)
+
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel)
+        start_button = button_box.addButton("Start Run", QDialogButtonBox.ButtonRole.AcceptRole)
+        config_layout.addWidget(button_box)
+
+        def update_summary():
+            summary = self._compute_run_summary(experiment_ids, runs_spin.value())
+            summary_label.setText(
+                "Summary:\n"
+                f"{summary['num_experiments']} experiments · {summary['total_conditions']} conditions total\n"
+                f"× {summary['num_prompts']} prompts × {summary['num_runs']} runs\n"
+                f"= {summary['total_calls']} total API calls"
+            )
+            start_button.setEnabled(summary["total_calls"] > 0)
+
+        runs_spin.valueChanged.connect(update_summary)
+        button_box.rejected.connect(config_dialog.reject)
+        button_box.accepted.connect(config_dialog.accept)
+        update_summary()
+
+        if config_dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        self._start_experiment_run(experiment_ids, runs_spin.value())
+
+    def _start_experiment_run(self, experiment_ids, num_runs):
+        summary = self._compute_run_summary(experiment_ids, num_runs)
+        if summary["total_calls"] <= 0:
+            QMessageBox.warning(self, "No Work", "No experiment conditions or prompts are available to run.")
+            return
+
         dialog = QDialog(self)
-        dialog.setWindowTitle("Running Experiment")
+        dialog.setWindowTitle(f"Running {len(experiment_ids)} Experiments")
         dlg_layout = QVBoxLayout(dialog)
 
         progress_bar = QProgressBar()
-        progress_bar.setRange(0, 0)
-        progress_bar.setTextVisible(False)
+        progress_bar.setRange(0, summary["total_calls"])
+        progress_bar.setValue(0)
+        progress_bar.setTextVisible(True)
         dlg_layout.addWidget(progress_bar)
 
-        status_label = QLabel("Preparing to run experiment...")
+        status_label = QLabel("Preparing to run experiments...")
         dlg_layout.addWidget(status_label)
 
         cancel_button = QPushButton("Cancel")
-        cancel_button.clicked.connect(dialog.reject)
         dlg_layout.addWidget(cancel_button)
 
         dialog.show()
         QApplication.processEvents()
 
-        prompt_ids = [p["id"] for p in (data_prompts if data_prompts else prompts)]
-        self._experiment_runner = ExperimentRunner(self.experiment_manager, experiment_id, prompt_ids)
+        prompt_ids = [p["id"] for p in self.data_prompts_for_run]
+        self._experiment_runner = ExperimentRunner(self.experiment_manager, experiment_ids, prompt_ids, num_runs)
+
+        def format_status(current):
+            completed_before_current = max(current - 1, 0)
+            exp_count = len(experiment_ids)
+            prompts_count = summary["num_prompts"]
+            offset = completed_before_current
+            for exp_index, experiment_id in enumerate(experiment_ids, start=1):
+                experiment = self.experiment_manager.get_experiment(experiment_id) or {}
+                exp_calls = len(experiment.get("conditions", [])) * prompts_count * num_runs
+                if offset < exp_calls:
+                    per_condition = prompts_count * num_runs
+                    within_condition = offset % per_condition
+                    prompt_index = (within_condition // num_runs) + 1
+                    run_index = (within_condition % num_runs) + 1
+                    return f"Experiment {exp_index}/{exp_count} · Prompt {prompt_index}/{prompts_count} · Run {run_index}/{num_runs}"
+                offset -= exp_calls
+            return f"Experiment {exp_count}/{exp_count} · Complete"
 
         def update_progress(current, total):
-            status_label.setText(f"Processing prompt {current}/{total}")
+            progress_bar.setMaximum(total)
+            progress_bar.setValue(current)
+            status_label.setText(format_status(current))
             QApplication.processEvents()
 
+        def cancel_run():
+            if self._experiment_runner:
+                self._experiment_runner.stop()
+            dialog.reject()
+
+        cancel_button.clicked.connect(cancel_run)
         self._experiment_runner.progress.connect(update_progress)
         self._experiment_runner.finished.connect(lambda results: self._on_experiment_finished(results, dialog))
         self._experiment_runner.error.connect(lambda error: self._on_experiment_error(error, dialog))
@@ -706,9 +773,13 @@ class ExperimentsPage(QWidget):
         dialog.accept()
         self.experiment_run_complete.emit()
         if results:
+            result_files = [result.get("results_file") for result in results if result and result.get("results_file")]
+            result_location = "results/"
+            if len(result_files) == 1:
+                result_location = result_files[0]
             QMessageBox.information(
                 self, "Experiment Complete",
-                f"Experiment completed successfully.\nResults saved to: {results.get('results_file', 'results folder')}",
+                f"{len(results)} experiments completed.\nResults saved to: {result_location}",
             )
         else:
             QMessageBox.warning(self, "Experiment Complete", "Experiment completed but no results were generated.")

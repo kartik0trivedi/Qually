@@ -82,7 +82,6 @@ class WelcomeScreen(QWidget):
 
         browse_btn = QPushButton("Browse")
         browse_btn.setObjectName("welcomeBrowseButton")
-        browse_btn.setFixedWidth(80)
         browse_btn.clicked.connect(self.select_project_folder)
 
         folder_row.addWidget(self.folder_path_input, 1)

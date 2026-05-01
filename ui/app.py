@@ -1,6 +1,7 @@
 import sys
 
 from PyQt6.QtWidgets import QApplication
+from PyQt6 import QtSvg  # noqa: F401 — loads the SVG plugin so url() in QSS renders SVGs
 
 from ui.main_window import MainWindow
 from ui.theme import FontManager, load_app_stylesheet, resources_path

@@ -105,4 +105,11 @@ def load_app_stylesheet(resources_path_: Path) -> str:
     else:
         gui_logger.warning(f"Experiment theme file not found: {experiment_theme_path}")
 
-    return "\n".join(theme_parts)
+    stylesheet = "\n".join(theme_parts)
+
+    # Replace relative icon paths with absolute paths so Qt resolves them
+    # regardless of working directory (important in bundled .app builds).
+    icons_dir = str(resources_path_ / "icons").replace("\\", "/")
+    stylesheet = stylesheet.replace("url(resources/icons/", f"url({icons_dir}/")
+
+    return stylesheet

@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Dict
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QIcon
+import qtawesome as qta
 from PyQt6.QtWidgets import (
     QFileDialog,
     QFrame,
@@ -76,7 +76,7 @@ class ResultsPage(QWidget):
         file_list_layout.addWidget(self._list_stack, 1)
 
         refresh_btn = QPushButton("Refresh")
-        refresh_btn.setIcon(QIcon.fromTheme("view-refresh"))
+        refresh_btn.setIcon(qta.icon("fa5s.sync-alt", color="white"))
         refresh_btn.clicked.connect(self.refresh)
         file_list_layout.addWidget(refresh_btn)
 
@@ -121,13 +121,13 @@ class ResultsPage(QWidget):
 
         # Detail table
         self.results_detail_table = QTableWidget()
-        self.results_detail_table.setColumnCount(8)
+        self.results_detail_table.setColumnCount(9)
         self.results_detail_table.setHorizontalHeaderLabels(
-            ["Prompt ID", "Experiment", "Condition", "Provider", "Model",
+            ["Prompt ID", "Experiment", "Condition", "Run", "Provider", "Model",
              "Response", "Duration (s)", "Error"]
         )
         self.results_detail_table.horizontalHeader().setSectionResizeMode(
-            5, QHeaderView.ResizeMode.Stretch
+            6, QHeaderView.ResizeMode.Stretch
         )
         self.results_detail_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.results_detail_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -136,7 +136,7 @@ class ResultsPage(QWidget):
         details_layout.addWidget(self.results_detail_table, 1)
 
         export_btn = QPushButton("Export to CSV")
-        export_btn.setIcon(QIcon.fromTheme("document-save-as"))
+        export_btn.setIcon(qta.icon("fa5s.file-download", color="white"))
         export_btn.clicked.connect(self.export_selected_result)
         details_layout.addWidget(export_btn, 0, Qt.AlignmentFlag.AlignRight)
 
@@ -198,6 +198,25 @@ class ResultsPage(QWidget):
     # Display selected result
     # ------------------------------------------------------------------
 
+    def _condition_result_runs(self, condition_result):
+        if not condition_result:
+            return []
+        if isinstance(condition_result, dict) and isinstance(condition_result.get("runs"), list):
+            runs = condition_result.get("runs", [])
+        elif isinstance(condition_result, dict):
+            runs = [condition_result]
+        else:
+            return []
+
+        normalized_runs = []
+        for index, run in enumerate(runs, start=1):
+            if not isinstance(run, dict):
+                continue
+            run_data = run.copy()
+            run_data.setdefault("run_index", index)
+            normalized_runs.append(run_data)
+        return normalized_runs
+
     def display_selected_result_file(self, current_item: QListWidgetItem, _=None):
         if not current_item:
             self._reset_detail_panel()
@@ -235,22 +254,24 @@ class ResultsPage(QWidget):
             for prompt_id, prompt_data in prompt_results.items():
                 for cond_id, resp_data in prompt_data.get("condition_results", {}).items():
                     cond = conditions_info.get(cond_id, {})
-                    error_text = resp_data.get("error", "")
-                    if error_text:
-                        error_count += 1
-                    all_rows.append({
-                        "prompt_id": prompt_id,
-                        "experiment": exp_name,
-                        "condition": cond.get("name", "—"),
-                        "provider": cond.get("provider", "—").capitalize(),
-                        "model": cond.get("model", "—"),
-                        "response": resp_data.get("text", "—"),
-                        "duration": (
-                            f"{resp_data['duration_seconds']:.2f}"
-                            if resp_data.get("duration_seconds") is not None else "—"
-                        ),
-                        "error": error_text,
-                    })
+                    for run in self._condition_result_runs(resp_data):
+                        error_text = run.get("error", "")
+                        if error_text:
+                            error_count += 1
+                        all_rows.append({
+                            "prompt_id": prompt_id,
+                            "experiment": exp_name,
+                            "condition": cond.get("name", "—"),
+                            "run": str(run.get("run_index", 1)),
+                            "provider": cond.get("provider", "—").capitalize(),
+                            "model": cond.get("model", "—"),
+                            "response": run.get("text", "—"),
+                            "duration": (
+                                f"{run['duration_seconds']:.2f}"
+                                if run.get("duration_seconds") is not None else "—"
+                            ),
+                            "error": error_text,
+                        })
 
             n_prompts = len(prompt_results)
             n_conditions = len(conditions_info)
@@ -267,14 +288,15 @@ class ResultsPage(QWidget):
                 self.results_detail_table.setItem(i, 0, QTableWidgetItem(row["prompt_id"]))
                 self.results_detail_table.setItem(i, 1, QTableWidgetItem(row["experiment"]))
                 self.results_detail_table.setItem(i, 2, QTableWidgetItem(row["condition"]))
-                self.results_detail_table.setItem(i, 3, QTableWidgetItem(row["provider"]))
-                self.results_detail_table.setItem(i, 4, QTableWidgetItem(row["model"]))
-                self.results_detail_table.setItem(i, 5, QTableWidgetItem(row["response"]))
-                self.results_detail_table.setItem(i, 6, QTableWidgetItem(row["duration"]))
+                self.results_detail_table.setItem(i, 3, QTableWidgetItem(row["run"]))
+                self.results_detail_table.setItem(i, 4, QTableWidgetItem(row["provider"]))
+                self.results_detail_table.setItem(i, 5, QTableWidgetItem(row["model"]))
+                self.results_detail_table.setItem(i, 6, QTableWidgetItem(row["response"]))
+                self.results_detail_table.setItem(i, 7, QTableWidgetItem(row["duration"]))
                 err_item = QTableWidgetItem(row["error"])
                 if row["error"]:
                     err_item.setForeground(Qt.GlobalColor.red)
-                self.results_detail_table.setItem(i, 7, err_item)
+                self.results_detail_table.setItem(i, 8, err_item)
 
             self.results_detail_table.resizeRowsToContents()
 
