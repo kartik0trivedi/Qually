@@ -1,3 +1,4 @@
+import json
 import logging
 import time
 from pathlib import Path
@@ -118,10 +119,17 @@ class PromptsPage(QWidget):
         form_layout.addWidget(QLabel("Prompt:"))
         form_layout.addWidget(self.prompt_edit)
 
+        prompt_buttons = QHBoxLayout()
+        self.add_prompt_button = QPushButton("Add Prompt")
+        self.add_prompt_button.setIcon(qta.icon("fa5s.plus-circle", color="white"))
+        self.add_prompt_button.clicked.connect(self.add_prompt_from_form)
         self.create_from_data_button = QPushButton("Create Prompts from Data File")
         self.create_from_data_button.setIcon(qta.icon("fa5s.plus", color="white"))
         self.create_from_data_button.clicked.connect(self.create_prompts_from_data)
-        form_layout.addWidget(self.create_from_data_button, 0, Qt.AlignmentFlag.AlignRight)
+        prompt_buttons.addWidget(self.add_prompt_button)
+        prompt_buttons.addWidget(self.create_from_data_button)
+        prompt_buttons.addStretch()
+        form_layout.addLayout(prompt_buttons)
         form_layout.addStretch()
 
         table_widget = QWidget()
@@ -173,11 +181,11 @@ class PromptsPage(QWidget):
         has_data = self.data_manager and self.data_manager.has_data()
         self.data_warning_label.setVisible(not has_data)
         self.data_info_label.setVisible(has_data)
-        self.create_from_data_button.setEnabled(has_data)
+        self.create_from_data_button.setEnabled(True)
 
         if not has_data:
             self.data_warning_label.setText(
-                "⚠️ Warning: No data file loaded. Please import data in the Data Files tab before working with prompts."
+                "⚠️ No row data file is loaded in the Data tab. You can still add prompts manually or import prompt definitions from CSV/JSON."
             )
             return
 
@@ -187,83 +195,167 @@ class PromptsPage(QWidget):
             f"File: {Path(info['file_path']).name}\n"
             f"Text Column: {info.get('text_column', 'Not selected')}\n"
             f"Total Rows: {info['total_rows']}\n\n"
-            f"To create prompts for each row in your data file:\n"
-            f"1. Set the system prompt (optional)\n"
-            f"2. Set the prepend text (optional)\n"
-            f"3. Set the prompt text\n"
-            f"4. Click 'Create Prompts from Data File'"
+            f"Use 'Create Prompts from Data File' to choose a separate CSV/JSON prompt-definition file.\n"
+            f"Required column: prompt_text, prompt, or question.\n"
+            f"Optional columns: system_prompt, prepend_text, id, data_id, tags."
         )
 
-    def create_prompts_from_data(self):
-        """Create prompts from the loaded data file."""
+    def add_prompt_from_form(self):
+        """Add the current prompt fields as one prompt in the prompt library."""
         if not self.prompt_manager:
             QMessageBox.critical(self, "Error", "Prompt manager not initialized.")
             return
 
-        if not self.data_manager or not self.data_manager.has_data():
-            QMessageBox.warning(self, "No Data", "Please load a data file first.")
+        system_prompt = self.system_prompt_edit.toPlainText().strip()
+        prepend_text = self.prepend_edit.toPlainText().strip()
+        prompt_text = self.prompt_edit.toPlainText().strip()
+
+        if not prompt_text:
+            QMessageBox.warning(self, "Missing Prompt", "Prompt text cannot be empty.")
             return
 
-        if not self.data_manager.file_info.get("text_column"):
-            QMessageBox.warning(
-                self,
-                "No Text Column Selected",
-                "Please select a text column in the Data Files tab first.\n\n"
-                "Available columns:\n" + "\n".join(f"- {col}" for col in self.data_manager.data.columns),
+        prompt_id = f"prompt_{time.time_ns()}"
+        self.prompt_manager.add_prompt(
+            prompt_id=prompt_id,
+            prompt_text=prompt_text,
+            system_prompt=system_prompt,
+            prepend_text=f"{prepend_text}\n" if prepend_text else "",
+            tags=["manual"],
+        )
+
+        if self.prompt_manager.export_prompts():
+            self.system_prompt_edit.clear()
+            self.prepend_edit.clear()
+            self.prompt_edit.clear()
+            self.load_prompts()
+            QMessageBox.information(self, "Success", "Prompt added.")
+        else:
+            QMessageBox.critical(self, "Error", "Failed to save prompt to file.")
+
+    def _first_existing_column(self, columns, candidates):
+        normalized = {
+            str(col).strip().lower().replace(" ", "_").replace("-", "_"): col
+            for col in columns
+        }
+        for candidate in candidates:
+            if candidate in normalized:
+                return normalized[candidate]
+        return None
+
+    def _create_prompts_from_prompt_columns(self, data):
+        columns = data.columns
+        prompt_column = self._first_existing_column(columns, ["prompt_text", "prompt", "question"])
+        if not prompt_column:
+            return None
+
+        system_column = self._first_existing_column(columns, ["system_prompt", "system"])
+        prepend_column = self._first_existing_column(columns, ["prepend_text", "prepend"])
+        id_column = self._first_existing_column(columns, ["id", "prompt_id"])
+        data_id_column = self._first_existing_column(columns, ["data_id", "document_id", "doc_id"])
+        tags_column = self._first_existing_column(columns, ["tags"])
+
+        created_count = 0
+        timestamp = int(time.time())
+        for index, row in data.iterrows():
+            prompt_text = str(row.get(prompt_column, "")).strip()
+            if not prompt_text:
+                continue
+
+            prompt_id = str(row.get(id_column, "")).strip() if id_column else ""
+            if not prompt_id:
+                prompt_id = f"prompt_{timestamp}_row_{index}"
+
+            tags = []
+            if data_id_column:
+                data_id = str(row.get(data_id_column, "")).strip()
+                if data_id:
+                    tags.append(f"data_id_{data_id}")
+            if tags_column:
+                tags.extend(tag.strip() for tag in str(row.get(tags_column, "")).split(";") if tag.strip())
+            tags.append(f"row_{index}")
+
+            prepend_text = str(row.get(prepend_column, "")).strip() if prepend_column else ""
+            system_prompt = str(row.get(system_column, "")).strip() if system_column else ""
+            self.prompt_manager.add_prompt(
+                prompt_id=prompt_id,
+                prompt_text=prompt_text,
+                system_prompt=system_prompt,
+                prepend_text=f"{prepend_text}\n" if prepend_text else "",
+                tags=tags,
             )
+            created_count += 1
+
+        return {
+            "created_count": created_count,
+            "mode": "prompt_columns",
+            "prompt_column": prompt_column,
+            "system_column": system_column,
+            "prepend_column": prepend_column,
+        }
+
+    def _load_prompt_definition_file(self, file_path):
+        path = Path(file_path)
+        suffix = path.suffix.lower()
+
+        if suffix == ".csv":
+            return pd.read_csv(path, dtype=str).fillna("")
+        if suffix == ".json":
+            with open(path, "r", encoding="utf-8") as f:
+                payload = json.load(f)
+            if isinstance(payload, list):
+                return pd.DataFrame(payload).fillna("")
+            if isinstance(payload, dict):
+                if isinstance(payload.get("prompts"), list):
+                    return pd.DataFrame(payload["prompts"]).fillna("")
+                if isinstance(payload.get("data"), list):
+                    return pd.DataFrame(payload["data"]).fillna("")
+                return pd.DataFrame([payload]).fillna("")
+            raise ValueError("JSON file must contain an object, a list of objects, or a 'prompts' list.")
+
+        raise ValueError("Unsupported file type. Please choose a CSV or JSON file.")
+
+    def create_prompts_from_data(self):
+        """Import prompt definitions from a user-selected CSV or JSON file."""
+        if not self.prompt_manager:
+            QMessageBox.critical(self, "Error", "Prompt manager not initialized.")
             return
 
-        if not self.data_manager.file_info.get("id_column"):
-            QMessageBox.warning(self, "No ID Column Selected", "Please select an ID column in the Data Files tab first.")
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Import Prompt Definitions",
+            str(Path(self.project_folder)),
+            "Prompt Definition Files (*.csv *.json);;CSV Files (*.csv);;JSON Files (*.json)",
+        )
+        if not file_path:
             return
 
         try:
-            system_prompt = self.system_prompt_edit.toPlainText().strip()
-            prepend_text = self.prepend_edit.toPlainText().strip()
-            prompt_text = self.prompt_edit.toPlainText().strip()
-
-            if not prompt_text:
-                QMessageBox.warning(self, "Error", "Prompt text cannot be empty.")
+            data = self._load_prompt_definition_file(file_path)
+            prompt_column_result = self._create_prompts_from_prompt_columns(data)
+            if not prompt_column_result:
+                QMessageBox.warning(
+                    self,
+                    "No Prompt Column",
+                    "The selected file must contain a prompt_text, prompt, or question column.\n\n"
+                    "Optional columns: system_prompt, prepend_text, id, data_id, tags.",
+                )
                 return
 
-            data = self.data_manager.data
-            text_column = self.data_manager.file_info["text_column"]
-            id_column = self.data_manager.file_info["id_column"]
-
-            timestamp = int(time.time())
-            for index, row in data.iterrows():
-                text_content = str(row[text_column])
-                data_id = str(row[id_column])
-                prompt_id = f"prompt_{timestamp}_row_{index}"
-
-                full_text = text_content
-                if prepend_text:
-                    full_text = f"{prepend_text} {text_content}"
-                full_prompt = f"{full_text}\n{prompt_text}"
-
-                self.prompt_manager.add_prompt(
-                    prompt_id=prompt_id,
-                    prompt_text=full_prompt,
-                    system_prompt=system_prompt,
-                    prepend_text=prepend_text,
-                    tags=[f"data_id_{data_id}", f"row_{index}"],
-                )
+            created_count = prompt_column_result["created_count"]
+            if created_count == 0:
+                QMessageBox.warning(self, "No Prompts", "No non-empty prompt rows were found in the selected file.")
+                return
 
             if self.prompt_manager.export_prompts():
-                self.system_prompt_edit.clear()
-                self.prepend_edit.clear()
-                self.prompt_edit.clear()
                 self.load_prompts()
-
                 QMessageBox.information(
                     self,
                     "Success",
-                    f"Created prompts for all rows in the data file.\n"
-                    f"Text column used: {text_column}\n"
-                    f"ID column used: {id_column}\n"
-                    f"Total prompts created: {len(data)}",
+                    f"Imported prompt definitions from:\n{file_path}\n\n"
+                    f"Prompt column used: {prompt_column_result['prompt_column']}\n"
+                    f"Total prompts created: {created_count}",
                 )
-                gui_logger.info("Created prompts from data file")
+                gui_logger.info(f"Imported prompt definitions from file: {file_path}")
             else:
                 QMessageBox.critical(self, "Error", "Failed to save prompts to file.")
                 gui_logger.error("Failed to save prompts to file")
@@ -397,6 +489,13 @@ class PromptsPage(QWidget):
             self.prompts_table.setItem(row, 1, QTableWidgetItem(data_id))
             self.prompts_table.setItem(row, 2, QTableWidgetItem(prompt.get("system_prompt", "")))
             self.prompts_table.setItem(row, 3, QTableWidgetItem(prompt.get("prepend_text", "")))
-            self.prompts_table.setItem(row, 4, QTableWidgetItem(prompt.get("prompt_text", "")))
+            self.prompts_table.setItem(row, 4, QTableWidgetItem(self._display_prompt_text(prompt)))
             tags = ";".join(prompt.get("tags", []))
             self.prompts_table.setItem(row, 5, QTableWidgetItem(tags))
+
+    def _display_prompt_text(self, prompt):
+        prompt_text = prompt.get("prompt_text", "")
+        prefix = f"{prompt.get('prepend_text') or ''}{prompt.get('data_text') or ''}"
+        if prefix and prompt_text.startswith(prefix):
+            return prompt_text[len(prefix):].lstrip()
+        return prompt_text
