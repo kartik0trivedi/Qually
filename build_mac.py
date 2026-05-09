@@ -47,7 +47,7 @@ DATA_FILES = [
 # py2app specific build options
 OPTIONS = {
     'argv_emulation': False,
-    'packages': ['PyQt6', 'pandas', 'numpy', 'cryptography', 'requests', 'ui', 'qtawesome', 'qtpy'],
+    'packages': ['PyQt6', 'pandas', 'numpy', 'cryptography', 'requests', 'charset_normalizer' ,'ui', 'qtawesome', 'qtpy'],
     'includes': [
         'PyQt6.QtCore',
         'PyQt6.QtGui',

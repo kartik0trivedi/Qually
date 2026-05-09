@@ -65,4 +65,8 @@ build_win.py
 # Markdown files (except README.md)
 *.md
 !README.md 
-
+*.xlsx
+*.xls
+build_win-*.py
+.env
+.env.*
