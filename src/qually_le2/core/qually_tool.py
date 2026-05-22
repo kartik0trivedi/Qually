@@ -12,12 +12,35 @@ from cryptography.fernet import Fernet
 from requests.adapters import HTTPAdapter, Retry
 import shutil
 
+import sys
+
+def get_safe_log_path(filename: str) -> str:
+    """Get a safe, writeable log file path depending on the platform and runtime mode."""
+    if getattr(sys, "frozen", False):
+        if sys.platform == "darwin":
+            log_dir = Path.home() / "Library" / "Logs" / "Qually"
+        elif sys.platform == "win32":
+            import os
+            log_dir = Path(os.environ.get("LOCALAPPDATA", str(Path.home() / "AppData" / "Local"))) / "Qually" / "logs"
+        else:
+            log_dir = Path.home() / ".qually" / "logs"
+    else:
+        log_dir = Path(".")
+        
+    try:
+        log_dir.mkdir(parents=True, exist_ok=True)
+        return str(log_dir / filename)
+    except Exception:
+        fallback_dir = Path.home() / ".qually_logs"
+        fallback_dir.mkdir(exist_ok=True)
+        return str(fallback_dir / filename)
+
 # Set up logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.FileHandler("llm_audit.log"),
+        logging.FileHandler(get_safe_log_path("llm_audit.log")),
         logging.StreamHandler()
     ]
 )

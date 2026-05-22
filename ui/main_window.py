@@ -1,6 +1,7 @@
 import logging
 import os
 from pathlib import Path
+import sys
 
 from PyQt6.QtWidgets import (
     QLabel, QMainWindow, QMessageBox, QProgressBar, QVBoxLayout, QWidget,
@@ -12,14 +13,35 @@ from ui.settings_manager import SettingsManager
 from ui.welcome_screen import WelcomeScreen
 from ui.workspace_shell import WorkspaceShell
 
-log_folder = Path("logs")
-log_folder.mkdir(exist_ok=True)
+
+def get_safe_log_path(filename: str) -> str:
+    """Get a safe, writeable log file path depending on the platform and runtime mode."""
+    if getattr(sys, "frozen", False):
+        if sys.platform == "darwin":
+            log_dir = Path.home() / "Library" / "Logs" / "Qually"
+        elif sys.platform == "win32":
+            import os
+            log_dir = Path(os.environ.get("LOCALAPPDATA", str(Path.home() / "AppData" / "Local"))) / "Qually" / "logs"
+        else:
+            log_dir = Path.home() / ".qually" / "logs"
+    else:
+        # In development mode, write to a local "logs" directory
+        log_dir = Path("logs")
+        
+    try:
+        log_dir.mkdir(parents=True, exist_ok=True)
+        return str(log_dir / filename)
+    except Exception:
+        fallback_dir = Path.home() / ".qually_logs"
+        fallback_dir.mkdir(exist_ok=True)
+        return str(fallback_dir / filename)
+
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.FileHandler(log_folder / "qually_gui.log"),
+        logging.FileHandler(get_safe_log_path("qually_gui.log")),
         logging.StreamHandler(),
     ],
 )
