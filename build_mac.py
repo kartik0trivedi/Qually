@@ -74,8 +74,8 @@ OPTIONS = {
         'CFBundleName': 'Qually',
         'CFBundleDisplayName': 'Qually',
         'CFBundleIdentifier': 'in.kartiktrivedi.qually',
-        'CFBundleVersion': '2.1.0',
-        'CFBundleShortVersionString': '2.1.0',
+        'CFBundleVersion': '0.3.0-beta.2',
+        'CFBundleShortVersionString': '0.3.0-beta.2',
         'LSMinimumSystemVersion': '10.13', # macOS High Sierra or later
         'NSHighResolutionCapable': True
     }
